@@ -1,0 +1,17 @@
+# Monorepo
+node_modules/
+dist/
+build/
+.env
+.env.local
+.DS_Store
+Thumbs.db
+
+# Backend
+server/dist/
+server/logs/
+
+# Frontend
+frontend/.next/
+frontend/out/
+frontend/build/

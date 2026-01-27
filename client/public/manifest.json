@@ -1,0 +1,23 @@
+{
+  "name": "Guantanamera Dashboard - Gestión de Pedidos",
+  "short_name": "Guantanamera Dashboard",
+  "description": "Sistema de gestión de pedidos interno para Guantanamera",
+  "display": "standalone",
+  "start_url": "/",
+  "background_color": "#FFFFFF",
+  "theme_color": "#DC2626",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
