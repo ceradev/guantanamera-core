@@ -49,34 +49,34 @@ router.patch("/settings", apiKeyMiddleware, settingController.updateSettings);
  *     summary: Get public store status
  *     tags: [Settings]
  *     responses:
-52→ *       200:
-53→ *         description: Public store status (orders enabled, hours, info)
-54→ *         content:
-55→ *           application/json:
-56→ *             schema:
-57→ *               type: object
-58→ *               properties:
-59→ *                 orders_enabled:
-60→ *                   type: boolean
-61→ *                 weekly_schedule:
-62→ *                   type: array
-63→ *                   items:
-64→ *                     type: object
-65→ *                     properties:
-66→ *                       day: { type: integer }
-67→ *                       name: { type: string }
-68→ *                       open: { type: string }
-69→ *                       close: { type: string }
-70→ *                       enabled: { type: boolean }
-71→ *                 prep_time:
-72→ *                   type: integer
-73→ *                 store_name:
-74→ *                   type: string
-75→ *                 store_address:
-76→ *                   type: string
-77→ *                 store_phone:
-78→ *                   type: string
-79→ */
+ *       200:
+ *         description: Public store status (orders enabled, hours, info)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 orders_enabled:
+ *                   type: boolean
+ *                 weekly_schedule:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       day: { type: integer }
+ *                       name: { type: string }
+ *                       open: { type: string }
+ *                       close: { type: string }
+ *                       enabled: { type: boolean }
+ *                 prep_time:
+ *                   type: integer
+ *                 store_name:
+ *                   type: string
+ *                 store_address:
+ *                   type: string
+ *                 store_phone:
+ *                   type: string
+ */
 router.get("/settings/public/status", settingController.getPublicStatus);
 
 export default router;

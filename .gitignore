@@ -11,6 +11,10 @@ Thumbs.db
 server/dist/
 server/logs/
 
+# Docker
+docker-compose.dev.yml
+docker-compose.prod.yml
+
 # Frontend
 frontend/.next/
 frontend/out/
