@@ -116,6 +116,45 @@ router.get("/sales/today", apiKeyMiddleware, salesController.getToday);
  *       500:
  *         description: Internal server error
  */
-router.get("/sales", apiKeyMiddleware, validate(salesQuerySchema), salesController.getAggregated);
+router.get("/sales/stats", apiKeyMiddleware, validate(salesQuerySchema), salesController.getAggregated);
+
+/**
+ * @swagger
+ * /sales/manual:
+ *   post:
+ *     summary: Crear venta manual
+ *     tags: [Sales]
+ *     security:
+ *       - ApiKeyAuth: []
+ */
+router.post("/sales/manual", apiKeyMiddleware, salesController.createManualSale);
+
+/**
+ * @swagger
+ * /sales:
+ *   get:
+ *     summary: Listar ventas (histórico)
+ *     tags: [Sales]
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         schema: { type: string }
+ *       - in: query
+ *         name: to
+ *         schema: { type: string }
+ *       - in: query
+ *         name: source
+ *         schema: { type: string, enum: [ORDER, MANUAL] }
+ */
+router.get("/sales", apiKeyMiddleware, salesController.getSales);
+
+/**
+ * @swagger
+ * /sales/:id:
+ *   get:
+ *     summary: Detalle de venta
+ *     tags: [Sales]
+ */
+router.get("/sales/:id", apiKeyMiddleware, salesController.getSaleById);
 
 export default router;

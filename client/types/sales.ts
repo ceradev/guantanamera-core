@@ -18,6 +18,7 @@ export interface SalesAggregate {
   topProductByUnits?: { productId: number; name: string; quantity: number }
   topProductByRevenue?: { productId: number; name: string; revenue: number }
   categories?: { categoryId: number; name: string; units: number; revenue: number }[]
+  products?: { productId: number; name: string; quantity: number; revenue: number }[]
   conversionRate?: number
   purchaseFrequencyPerDay?: number
   topCustomers?: { customerName: string; orders: number; revenue: number }[]

@@ -87,13 +87,14 @@ export interface SalesAggregate {
   topProductByUnits?: { productId: number; name: string; quantity: number };
   topProductByRevenue?: { productId: number; name: string; revenue: number };
   categories?: { categoryId: number; name: string; units: number; revenue: number }[];
+  products?: { productId: number; name: string; quantity: number; revenue: number }[];
   conversionRate?: number;
   purchaseFrequencyPerDay?: number;
   topCustomers?: { customerName: string; orders: number; revenue: number }[];
   previous?: { totalSales: number; totalOrders: number; averageOrderValue: number };
 }
 
-export const getAggregatedSales = async (type: PeriodType, baseDate?: Date): Promise<SalesAggregate> => {
+export const getAggregatedSales = async (type: PeriodType, baseDate?: Date, source?: SaleSource): Promise<SalesAggregate> => {
   const date = baseDate ?? new Date();
 
   const start = new Date(date);
@@ -108,7 +109,6 @@ export const getAggregatedSales = async (type: PeriodType, baseDate?: Date): Pro
     setEndOfDay(end);
   } else if (type === "week") {
     // Week starts on Monday
-    // JS getDay(): 0=Sunday, 1=Monday,...6=Saturday
     const day = start.getDay();
     const diffToMonday = day === 0 ? 6 : day - 1;
     start.setDate(start.getDate() - diffToMonday);
@@ -125,54 +125,53 @@ export const getAggregatedSales = async (type: PeriodType, baseDate?: Date): Pro
     setEndOfDay(end);
   }
 
-  const result = await prisma.order.aggregate({
-    where: {
-      status: OrderStatus.DELIVERED,
-      createdAt: {
-        gte: start,
-        lte: end,
-      },
+  const where: any = {
+    date: {
+      gte: start,
+      lte: end,
     },
-    _sum: { total: true },
+  };
+  
+  if (source) {
+    where.source = source;
+  }
+
+  const result = await prisma.sale.aggregate({
+    where,
+    _sum: { totalAmount: true },
     _count: true,
   });
 
-  const totalSales = parseFloat((result._sum.total ?? 0).toFixed(2));
+  const totalSales = parseFloat((result._sum.totalAmount ?? 0).toFixed(2));
   const totalOrders = typeof result._count === "number" ? result._count : 0;
   const averageOrderValue = totalOrders > 0 ? parseFloat((totalSales / totalOrders).toFixed(2)) : 0;
 
-  const orders = await prisma.order.findMany({
-    where: {
-      status: OrderStatus.DELIVERED,
-      createdAt: { gte: start, lte: end },
-    },
+  const sales = await prisma.sale.findMany({
+    where,
     include: {
       items: {
         include: {
           product: { select: { name: true, categoryId: true, category: { select: { name: true } } } },
         },
       },
+      order: { select: { customerName: true } }
     },
   });
 
   const productUnits = new Map<number, { name: string; quantity: number }>();
   const productRevenue = new Map<number, { name: string; revenue: number }>();
   const categoryMap = new Map<number, { name: string; units: number; revenue: number }>();
-  const customerMap = new Map<string, { orders: number; revenue: number }>();
-
-  for (const order of orders) {
-    customerMap.set(order.customerName, {
-      orders: (customerMap.get(order.customerName)?.orders ?? 0) + 1,
-      revenue: parseFloat(((customerMap.get(order.customerName)?.revenue ?? 0) + order.total).toFixed(2)),
-    });
-    for (const item of order.items) {
+  // Customer map only relevant for Order source, but we can track relatedOrderId
+  
+  for (const sale of sales) {
+    for (const item of sale.items) {
       const unitsEntry = productUnits.get(item.productId);
       productUnits.set(item.productId, {
         name: item.product.name,
         quantity: (unitsEntry?.quantity ?? 0) + item.quantity,
       });
       const revEntry = productRevenue.get(item.productId);
-      const itemRevenue = item.price * item.quantity;
+      const itemRevenue = item.unitPrice * item.quantity; // Use stored unitPrice
       productRevenue.set(item.productId, {
         name: item.product.name,
         revenue: parseFloat(((revEntry?.revenue ?? 0) + itemRevenue).toFixed(2)),
@@ -208,21 +207,24 @@ export const getAggregatedSales = async (type: PeriodType, baseDate?: Date): Pro
     revenue: v.revenue,
   })).sort((a, b) => b.revenue - a.revenue);
 
-  const cancelledCount = await prisma.order.count({
-    where: {
-      status: OrderStatus.CANCELLED,
-      createdAt: { gte: start, lte: end },
-    }
-  });
-  const conversionRate = (totalOrders + cancelledCount) > 0 ? parseFloat(((totalOrders / (totalOrders + cancelledCount)) * 100).toFixed(2)) : 0;
+  // Full products list for table
+  const products = Array.from(productUnits.entries()).map(([productId, info]) => {
+    const rev = productRevenue.get(productId)?.revenue ?? 0;
+    return {
+      productId,
+      name: info.name,
+      quantity: info.quantity,
+      revenue: rev,
+    };
+  }).sort((a,b) => b.revenue - a.revenue);
+
+  // Conversion rate logic relies on Orders logic (delivered vs cancelled). 
+  // For Sales model, we only store completed sales. So conversion rate might be NA or we check Orders separately.
+  // We'll skip complex conversion rate for now or keep it 0 unless we fetch Orders specifically.
+  const conversionRate = 0; 
   const daysInRange = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 0);
   const purchaseFrequencyPerDay = parseFloat((totalOrders / daysInRange).toFixed(2));
-  const topCustomers = Array.from(customerMap.entries()).map(([name, v]) => ({
-    customerName: name,
-    orders: v.orders,
-    revenue: v.revenue,
-  })).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
-
+  
   // Previous period
   const prevStart = new Date(start);
   const prevEnd = new Date(end);
@@ -236,22 +238,25 @@ export const getAggregatedSales = async (type: PeriodType, baseDate?: Date): Pro
     prevStart.setMonth(prevStart.getMonth() - 1);
     prevEnd.setMonth(prevEnd.getMonth() - 1);
   }
-  const prevAgg = await prisma.order.aggregate({
-    where: {
-      status: OrderStatus.DELIVERED,
-      createdAt: {
-        gte: prevStart,
-        lte: prevEnd,
-      },
+
+  const prevWhere: any = {
+    date: {
+      gte: prevStart,
+      lte: prevEnd,
     },
-    _sum: { total: true },
+  };
+  if (source) prevWhere.source = source;
+
+  const prevAgg = await prisma.sale.aggregate({
+    where: prevWhere,
+    _sum: { totalAmount: true },
     _count: true,
   });
-  const prevTotalSales = parseFloat((prevAgg._sum.total ?? 0).toFixed(2));
+  const prevTotalSales = parseFloat((prevAgg._sum.totalAmount ?? 0).toFixed(2));
   const prevTotalOrders = typeof prevAgg._count === "number" ? prevAgg._count : 0;
   const prevAOV = prevTotalOrders > 0 ? parseFloat((prevTotalSales / prevTotalOrders).toFixed(2)) : 0;
 
-  logger.info(`Sales Aggregate: type=${type} range=[${start.toISOString()} - ${end.toISOString()}] total=${totalSales} orders=${totalOrders}`);
+  logger.info(`Sales Aggregate (New): type=${type} range=[${start.toISOString()} - ${end.toISOString()}] total=${totalSales}`);
 
   return {
     type,
@@ -263,9 +268,9 @@ export const getAggregatedSales = async (type: PeriodType, baseDate?: Date): Pro
     topProductByUnits: topByUnits,
     topProductByRevenue: topByRevenue,
     categories,
+    products,
     conversionRate,
     purchaseFrequencyPerDay,
-    topCustomers,
     previous: {
       totalSales: prevTotalSales,
       totalOrders: prevTotalOrders,
@@ -273,3 +278,170 @@ export const getAggregatedSales = async (type: PeriodType, baseDate?: Date): Pro
     }
   };
 }
+
+// --- New Sales Logic ---
+
+import { SaleSource, Sale } from "@prisma/client";
+
+export interface CreateManualSaleInput {
+  date: string; // ISO Date Time string
+  items: { productId: number; quantity: number }[];
+  notes?: string;
+}
+
+export const createSaleFromOrder = async (orderId: number) => {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: { include: { product: true } } },
+  });
+
+  if (!order) throw new Error(`Order ${orderId} not found`);
+
+  // Check if sale already exists for this order to avoid duplicates
+  const existingSale = await prisma.sale.findFirst({
+    where: { relatedOrderId: orderId },
+  });
+
+  if (existingSale) {
+    logger.warn(`Sale already exists for order ${orderId}`);
+    return existingSale;
+  }
+
+  const sale = await prisma.$transaction(async (tx) => {
+    return tx.sale.create({
+      data: {
+        date: order.createdAt,
+        source: SaleSource.ORDER,
+        relatedOrderId: order.id,
+        totalAmount: order.total,
+        notes: `Auto-generated from Order #${order.id}`,
+        items: {
+          create: order.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            totalPrice: item.price * item.quantity,
+          })),
+        },
+      },
+    });
+  });
+
+  logger.info(`Sale created from Order #${orderId}: SaleID=${sale.id}`);
+  return sale;
+};
+
+export const createManualSale = async (data: CreateManualSaleInput) => {
+  const { date, items, notes } = data;
+
+  if (!items || items.length === 0) {
+    throw new Error("At least one item is required");
+  }
+
+  // Fetch product prices
+  const productIds = items.map((i) => i.productId);
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds } },
+  });
+
+  let totalAmount = 0;
+  const saleItemsData = items.map((item) => {
+    const product = products.find((p) => p.id === item.productId);
+    if (!product) throw new Error(`Product ${item.productId} not found`);
+    
+    const totalPrice = product.price * item.quantity;
+    totalAmount += totalPrice;
+
+    return {
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: product.price,
+      totalPrice,
+    };
+  });
+
+  const sale = await prisma.sale.create({
+    data: {
+      date: new Date(date),
+      source: SaleSource.MANUAL,
+      totalAmount,
+      notes,
+      items: {
+        create: saleItemsData,
+      },
+    },
+    include: {
+      items: true,
+    }
+  });
+
+  logger.info(`Manual Sale created: SaleID=${sale.id}`);
+  return sale;
+};
+
+export const getSales = async (filters: {
+  from?: string;
+  to?: string;
+  source?: SaleSource;
+  page?: number;
+  limit?: number;
+}) => {
+  const { from, to, source, page = 1, limit = 20 } = filters;
+  const skip = (page - 1) * limit;
+
+  const where: any = {};
+  if (from && to) {
+    where.date = {
+      gte: new Date(from),
+      lte: new Date(to),
+    };
+  }
+  if (source) {
+    where.source = source;
+  }
+
+  const [sales, total] = await Promise.all([
+    prisma.sale.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { date: "desc" },
+      include: {
+        items: {
+          include: {
+            product: { select: { name: true } },
+          },
+        },
+        order: {
+          select: { id: true, customerName: true },
+        },
+      },
+    }),
+    prisma.sale.count({ where }),
+  ]);
+
+  return {
+    data: sales,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+export const getSaleById = async (id: string) => {
+  const sale = await prisma.sale.findUnique({
+    where: { id },
+    include: {
+      items: {
+        include: {
+          product: true,
+        },
+      },
+      order: true,
+    },
+  });
+  return sale;
+};

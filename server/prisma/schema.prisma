@@ -26,14 +26,15 @@ model Category {
 }
 
 model Product {
-  id          Int            @id @default(autoincrement())
-  name        String         @unique
-  price       Float
-  active      Boolean        @default(true)
-  categoryId  Int
-  category    Category       @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime       @default(now())
-  orderItems  OrderItem[]
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  price      Float
+  active     Boolean     @default(true)
+  categoryId Int
+  category   Category    @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime    @default(now())
+  orderItems OrderItem[]
+  saleItems  SaleItem[]
 }
 
 model Order {
@@ -45,6 +46,7 @@ model Order {
   total         Float
   createdAt     DateTime    @default(now())
   items         OrderItem[]
+  sales         Sale[]
 }
 
 model OrderItem {
@@ -62,4 +64,34 @@ model Setting {
   value     String
   type      String   @default("string") // "string", "number", "boolean", "json"
   updatedAt DateTime @updatedAt
+}
+
+model Sale {
+  id             String     @id @default(uuid())
+  date           DateTime
+  source         SaleSource
+  relatedOrderId Int? // Changed to Int to match Order.id
+  totalAmount    Float
+  notes          String?
+  createdAt      DateTime   @default(now())
+
+  items SaleItem[]
+  order Order?     @relation(fields: [relatedOrderId], references: [id])
+}
+
+model SaleItem {
+  id         String @id @default(uuid())
+  saleId     String
+  productId  Int // Changed to Int to match Product.id
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+
+  sale    Sale    @relation(fields: [saleId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+enum SaleSource {
+  ORDER
+  MANUAL
 }

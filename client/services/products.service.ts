@@ -81,3 +81,11 @@ export async function updateProductActive(id: number, active: boolean): Promise<
 export async function deleteProduct(id: number): Promise<void> {
   return fetchAPI<void>(`/products/${id}`, { method: 'DELETE' }, true)
 }
+
+/**
+ * Obtiene lista plana de todos los productos (para selects/admin).
+ */
+export async function getProducts(): Promise<Product[]> {
+  const categories = await getAdminMenu()
+  return categories.flatMap(c => c.products || [])
+}

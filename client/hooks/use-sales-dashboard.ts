@@ -21,6 +21,7 @@ export function useSalesDashboard() {
     return `${yyyy}-${mm}-${dd}`
   })
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all')
+  const [source, setSource] = useState<string>('')
 
   const parseDate = (s: string) => {
     const [y, m, d] = s.split('-').map(Number)
@@ -58,7 +59,7 @@ export function useSalesDashboard() {
   const fetchSales = async () => {
     try {
       setLoading(true)
-      const res = await getSales(type, date)
+      const res = await getSales(type, date, source || undefined)
       setData(res)
       lastDataSignatureRef.current = `${res.totalOrders}|${res.totalSales}`
       setError(null)
@@ -76,7 +77,7 @@ export function useSalesDashboard() {
 
   useEffect(() => {
     fetchSales()
-  }, [type, date])
+  }, [type, date, source])
 
   useNotifications({ onOrdersUpdated: fetchSales })
 
@@ -168,6 +169,8 @@ export function useSalesDashboard() {
     setDate,
     selectedCategoryId,
     setSelectedCategoryId,
+    source,
+    setSource,
     parseDate,
     fmtISO,
     startOfWeekMonday,

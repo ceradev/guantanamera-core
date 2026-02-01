@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/data-display/chart"
 import { BarChart, Bar, XAxis, YAxis } from "recharts"
 import { useSalesDashboard } from "@/hooks/use-sales-dashboard"
+import { ManualSaleModal } from "./manual-sale-modal"
 
 export default function SalesPage() {
   const {
@@ -41,6 +42,8 @@ export default function SalesPage() {
     categoriesData,
     chartConfig,
     exportCSV,
+    source,
+    setSource,
   } = useSalesDashboard()
 
   return (
@@ -86,41 +89,64 @@ export default function SalesPage() {
       ) : data ? (
         <div className="flex-1 flex flex-col h-full">
           <header className="bg-white border-b px-4 md:px-8 py-6 shrink-0">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-12">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-8">
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Ventas</h1>
                   <p className="text-muted-foreground mt-1 text-sm md:text-base">Periodo: {periodLabel}</p>
                 </div>
-                
-                <div className="flex items-center gap-1 bg-gray-50 border rounded-xl p-1 w-fit">
-                  <button
-                    className={`px-4 md:px-6 py-2 md:py-2.5 rounded-lg text-sm md:text-base transition-all ${type === "day" ? "bg-white border shadow-sm font-bold text-red-600" : "text-gray-500 hover:text-gray-700"}`}
-                    onClick={() => setType("day")}
-                  >
-                    Día
-                  </button>
-                  <button
-                    className={`px-4 md:px-6 py-2 md:py-2.5 rounded-lg text-sm md:text-base transition-all ${type === "week" ? "bg-white border shadow-sm font-bold text-red-600" : "text-gray-500 hover:text-gray-700"}`} 
-                    onClick={() => setType("week")}
-                  >
-                    Semana
-                  </button>
-                  <button
-                    className={`px-4 md:px-6 py-2 md:py-2.5 rounded-lg text-sm md:text-base transition-all ${type === "month" ? "bg-white border shadow-sm font-bold text-red-600" : "text-gray-500 hover:text-gray-700"}`}
-                    onClick={() => setType("month")}
-                  >
-                    Mes
-                  </button>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-1 bg-gray-50 border rounded-xl p-1 w-fit">
+                    <button
+                      className={`px-3 md:px-5 py-2 rounded-lg text-sm transition-all ${type === "day" ? "bg-white border shadow-sm font-bold text-red-600" : "text-gray-500 hover:text-gray-700 font-medium"}`}
+                      onClick={() => setType("day")}
+                    >
+                      Día
+                    </button>
+                    <button
+                      className={`px-3 md:px-5 py-2 rounded-lg text-sm transition-all ${type === "week" ? "bg-white border shadow-sm font-bold text-red-600" : "text-gray-500 hover:text-gray-700 font-medium"}`}
+                      onClick={() => setType("week")}
+                    >
+                      Semana
+                    </button>
+                    <button
+                      className={`px-3 md:px-5 py-2 rounded-lg text-sm transition-all ${type === "month" ? "bg-white border shadow-sm font-bold text-red-600" : "text-gray-500 hover:text-gray-700 font-medium"}`}
+                      onClick={() => setType("month")}
+                    >
+                      Mes
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-gray-50 border rounded-xl p-1 w-fit">
+                    <button
+                      className={`px-3 md:px-5 py-2 rounded-lg text-sm transition-all ${!source ? "bg-white border shadow-sm font-bold text-gray-900" : "text-gray-500 hover:text-gray-700 font-medium"}`}
+                      onClick={() => setSource("")}
+                    >
+                      Todo
+                    </button>
+                    <button
+                      className={`px-3 md:px-5 py-2 rounded-lg text-sm transition-all ${source === "ORDER" ? "bg-white border shadow-sm font-bold text-gray-900" : "text-gray-500 hover:text-gray-700 font-medium"}`}
+                      onClick={() => setSource("ORDER")}
+                    >
+                      Pedidos
+                    </button>
+                    <button
+                      className={`px-3 md:px-5 py-2 rounded-lg text-sm transition-all ${source === "MANUAL" ? "bg-white border shadow-sm font-bold text-gray-900" : "text-gray-500 hover:text-gray-700 font-medium"}`}
+                      onClick={() => setSource("MANUAL")}
+                    >
+                      Manual
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-12 flex-1 sm:flex-none flex items-center gap-2 px-4 rounded-xl border-2">
-                      <CalendarRange className="w-5 h-5 text-gray-500" />
-                      <span className="font-medium whitespace-nowrap">{periodLabel || date}</span>
+                    <Button variant="outline" className="h-10 flex-1 sm:flex-none flex items-center gap-2 px-4 rounded-xl border-2 font-medium">
+                      <CalendarRange className="w-4 h-4 text-gray-500" />
+                      <span className="whitespace-nowrap">{periodLabel || date}</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[calc(100vw-2rem)] sm:w-fit p-2" align="end">
@@ -138,7 +164,7 @@ export default function SalesPage() {
                             setDate(fmtISO(new Date(y, m, 1)))
                           }}
                         >
-                          {["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"].map((name, idx) => (
+                          {["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"].map((name, idx) => (
                             <option key={name} value={idx}>{name}</option>
                           ))}
                         </select>
@@ -196,13 +222,14 @@ export default function SalesPage() {
                     )}
                   </PopoverContent>
                 </Popover>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={exportCSV}
-                  className="h-12 flex-1 sm:flex-none px-4 rounded-xl border-2 font-bold hover:bg-gray-50"
+                  className="h-10 flex-1 sm:flex-none px-4 rounded-xl border-2 font-bold hover:bg-gray-50"
                 >
-                  Exportar CSV
+                  Exportar
                 </Button>
+                <ManualSaleModal onSuccess={fetchSales} />
               </div>
             </div>
           </header>
@@ -317,32 +344,32 @@ export default function SalesPage() {
                     <div className="min-w-[600px] lg:min-w-0">
                       <ChartContainer config={chartConfig} className="h-[350px] md:h-96">
                         <BarChart data={categoriesData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
-                          <XAxis 
-                            dataKey="name" 
-                            fontSize={12} 
-                            tickLine={false} 
-                            axisLine={false} 
+                          <XAxis
+                            dataKey="name"
+                            fontSize={12}
+                            tickLine={false}
+                            axisLine={false}
                             tick={{ fill: '#6b7280', fontWeight: 600 }}
                             dy={10}
                           />
-                          <YAxis 
-                            fontSize={12} 
-                            tickLine={false} 
+                          <YAxis
+                            fontSize={12}
+                            tickLine={false}
                             axisLine={false}
                             tick={{ fill: '#6b7280', fontWeight: 600 }}
                             tickFormatter={(value) => `€${value}`}
                           />
                           <ChartTooltip content={<ChartTooltipContent className="bg-white border-2 shadow-xl rounded-xl" />} />
-                          <Bar 
-                            dataKey="revenue" 
-                            fill="var(--color-revenue)" 
+                          <Bar
+                            dataKey="revenue"
+                            fill="var(--color-revenue)"
                             radius={[6, 6, 0, 0]}
                             barSize={32}
                             name="Ingresos (€)"
                           />
-                          <Bar 
-                            dataKey="units" 
-                            fill="var(--color-units)" 
+                          <Bar
+                            dataKey="units"
+                            fill="var(--color-units)"
                             radius={[6, 6, 0, 0]}
                             barSize={32}
                             name="Unidades"
@@ -353,6 +380,39 @@ export default function SalesPage() {
                   </div>
                 </Card>
               </section>
+
+              {data.products && data.products.length > 0 && (
+                <section>
+                  <div className="flex items-center justify-between mb-4 px-1">
+                    <div>
+                      <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Detalle por Producto</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 font-medium">Listado detallado de productos vendidos</p>
+                    </div>
+                  </div>
+                  <Card className="shadow-sm border-2 border-gray-100 rounded-2xl overflow-hidden bg-white">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
+                          <tr>
+                            <th className="px-6 py-3 font-bold">Producto</th>
+                            <th className="px-6 py-3 font-bold text-right">Cantidad</th>
+                            <th className="px-6 py-3 font-bold text-right">Ingresos</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.products.map((p) => (
+                            <tr key={p.productId} className="border-b last:border-0 hover:bg-gray-50/50">
+                              <td className="px-6 py-4 font-medium text-gray-900">{p.name}</td>
+                              <td className="px-6 py-4 text-right">{p.quantity}</td>
+                              <td className="px-6 py-4 text-right font-bold">€{p.revenue.toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                </section>
+              )}
             </div>
           </main>
         </div>
@@ -364,7 +424,7 @@ export default function SalesPage() {
             </div>
             <div className="text-2xl font-bold mb-2 text-gray-900">Sin datos disponibles</div>
             <div className="text-muted-foreground font-medium">No hay registros para el periodo seleccionado. Intenta ajustar el filtro de fecha.</div>
-            <Button 
+            <Button
               className="mt-8 w-full h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700"
               onClick={() => setType("day")}
             >

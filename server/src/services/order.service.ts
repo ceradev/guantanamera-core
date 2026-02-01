@@ -289,6 +289,15 @@ export const updateOrderStatus = async (id: number, status: OrderStatus) => {
 
   logger.info(`Order status updated: ${id} - ${currentStatus} -> ${status}`);
   
+  // Create Sale if order is DELIVERED
+  if (status === OrderStatus.DELIVERED) {
+    try {
+      await import("./sales.service.js").then(s => s.createSaleFromOrder(id));
+    } catch (error) {
+      logger.error(`Failed to create sale from order ${id}`, error);
+    }
+  }
+
   notificationService.notifyOrdersUpdated();
 
   return updatedOrder;

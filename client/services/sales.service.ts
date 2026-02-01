@@ -15,9 +15,23 @@ export async function getSalesToday(): Promise<TodaySales> {
  * @param date Fecha opcional de referencia.
  * @returns Agregado de ventas.
  */
-export async function getSales(type: SalesPeriod, date?: string): Promise<SalesAggregate> {
+export async function getSales(type: SalesPeriod, date?: string, source?: string): Promise<SalesAggregate> {
   const params = new URLSearchParams({ type })
   if (date) params.append('date', date)
-  return fetchAPI<SalesAggregate>(`/sales?${params.toString()}`, {}, true)
+  if (source) params.append('source', source)
+  return fetchAPI<SalesAggregate>(`/sales/stats?${params.toString()}`, {}, true)
+}
+
+export interface CreateManualSaleInput {
+  date: string;
+  items: { productId: number; quantity: number }[];
+  notes?: string;
+}
+
+export async function createManualSale(data: CreateManualSaleInput): Promise<any> {
+  return fetchAPI('/sales/manual', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, true)
 }
 
