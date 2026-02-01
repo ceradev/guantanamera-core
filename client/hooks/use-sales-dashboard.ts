@@ -146,30 +146,174 @@ export function useSalesDashboard() {
   const exportCSV = () => {
     if (!data) return
     const rows: string[] = []
-    rows.push(['Tipo', data.type].join(','))
-    rows.push(['Inicio', data.start].join(','))
-    rows.push(['Fin', data.end].join(','))
-    rows.push(['Total vendido', data.totalSales.toFixed(2)].join(','))
-    rows.push(['Nº de pedidos', data.totalOrders.toString()].join(','))
-    rows.push(['Ticket medio', data.averageOrderValue.toFixed(2)].join(','))
-    if (data.topProductByUnits) {
-      rows.push(['Top producto por unidades', data.topProductByUnits.name, data.topProductByUnits.quantity.toString()].join(','))
+    
+    // Header
+    rows.push(['REPORTE DE VENTAS', ''].join(','))
+    rows.push(['Periodo', periodLabel].join(','))
+    rows.push(['Generado el', new Date().toLocaleString('es-ES')].join(','))
+    rows.push('') // Empty line
+    
+    // Summary
+    rows.push(['RESUMEN', ''].join(','))
+    rows.push(['Total Vendido (€)', data.totalSales.toFixed(2)].join(','))
+    rows.push(['Nº de Pedidos', data.totalOrders.toString()].join(','))
+    rows.push(['Ticket Medio (€)', data.averageOrderValue.toFixed(2)].join(','))
+    rows.push('') // Empty line
+
+    // Top Products
+    if (data.topProductByUnits || data.topProductByRevenue) {
+      rows.push(['PRODUCTOS DESTACADOS', ''].join(','))
+      if (data.topProductByUnits) {
+        rows.push(['Más vendido (unidades)', `${data.topProductByUnits.name} (${data.topProductByUnits.quantity})`].join(','))
+      }
+      if (data.topProductByRevenue) {
+        rows.push(['Más ingresos', `${data.topProductByRevenue.name} (€${data.topProductByRevenue.revenue.toFixed(2)})`].join(','))
+      }
+      rows.push('') // Empty line
     }
-    if (data.topProductByRevenue) {
-      rows.push(['Top producto por ingresos', data.topProductByRevenue.name, data.topProductByRevenue.revenue.toFixed(2)].join(','))
-    }
-    rows.push(['Categoría', 'Unidades', 'Ingresos'].join(','))
+
+    // Categories Table
+    rows.push(['DETALLE POR CATEGORÍA', '', ''].join(','))
+    rows.push(['Categoría', 'Unidades', 'Ingresos (€)'].join(','))
     ;(data.categories || []).forEach((c) => {
-      rows.push([c.name, c.units.toString(), c.revenue.toFixed(2)].join(','))
+      rows.push([`"${c.name}"`, c.units.toString(), c.revenue.toFixed(2)].join(','))
     })
+
     const csv = rows.join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `ventas_${data.type}_${date}.csv`
+    a.download = `Reporte_Ventas_${date}.csv`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const exportPDF = async () => {
+    if (!data) return
+    
+    // Dynamically import jspdf to avoid SSR issues
+    const { jsPDF } = await import('jspdf')
+    const autoTable = (await import('jspdf-autotable')).default
+
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.width
+
+    // Title
+    doc.setFontSize(22)
+    doc.setTextColor(40, 40, 40)
+    doc.text('Reporte de Ventas', pageWidth / 2, 20, { align: 'center' })
+
+    // Period Info
+    doc.setFontSize(12)
+    doc.setTextColor(100, 100, 100)
+    doc.text(`Periodo: ${periodLabel}`, pageWidth / 2, 30, { align: 'center' })
+    doc.text(`Generado: ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, 36, { align: 'center' })
+
+    // Summary Box
+    doc.setDrawColor(200, 200, 200)
+    doc.setFillColor(250, 250, 250)
+    doc.roundedRect(14, 45, pageWidth - 28, 35, 3, 3, 'FD')
+
+    doc.setFontSize(14)
+    doc.setTextColor(0, 0, 0)
+    doc.text('Resumen General', 20, 55)
+
+    doc.setFontSize(10)
+    doc.setTextColor(80, 80, 80)
+    
+    // Summary Metrics Grid
+    const colWidth = (pageWidth - 40) / 3
+    
+    // Total Sales
+    doc.text('Total Vendido', 20, 65)
+    doc.setFontSize(16)
+    doc.setTextColor(220, 38, 38) // Red color for money
+    doc.text(`€${data.totalSales.toFixed(2)}`, 20, 73)
+    
+    // Orders
+    doc.setFontSize(10)
+    doc.setTextColor(80, 80, 80)
+    doc.text('Nº Pedidos', 20 + colWidth, 65)
+    doc.setFontSize(16)
+    doc.setTextColor(40, 40, 40)
+    doc.text(data.totalOrders.toString(), 20 + colWidth, 73)
+
+    // AOV
+    doc.setFontSize(10)
+    doc.setTextColor(80, 80, 80)
+    doc.text('Ticket Medio', 20 + (colWidth * 2), 65)
+    doc.setFontSize(16)
+    doc.setTextColor(40, 40, 40)
+    doc.text(`€${data.averageOrderValue.toFixed(2)}`, 20 + (colWidth * 2), 73)
+
+    let yPos = 90
+
+    // Top Products Section
+    if (data.topProductByUnits || data.topProductByRevenue) {
+      doc.setFontSize(12)
+      doc.setTextColor(0, 0, 0)
+      doc.text('Productos Destacados', 14, yPos)
+      yPos += 8
+
+      const topProductsData = []
+      if (data.topProductByUnits) {
+        topProductsData.push(['Más vendido (unidades)', data.topProductByUnits.name, `${data.topProductByUnits.quantity} u.`])
+      }
+      if (data.topProductByRevenue) {
+        topProductsData.push(['Más ingresos', data.topProductByRevenue.name, `€${data.topProductByRevenue.revenue.toFixed(2)}`])
+      }
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Criterio', 'Producto', 'Valor']],
+        body: topProductsData,
+        theme: 'striped',
+        headStyles: { fillColor: [40, 40, 40] },
+        styles: { fontSize: 10 },
+        margin: { left: 14, right: 14 }
+      })
+
+      // Update yPos based on table end
+      yPos = (doc as any).lastAutoTable.finalY + 15
+    }
+
+    // Categories Table
+    doc.setFontSize(12)
+    doc.setTextColor(0, 0, 0)
+    doc.text('Desglose por Categoría', 14, yPos)
+    yPos += 6
+
+    const categoryRows = (data.categories || []).map(c => [
+      c.name,
+      c.units.toString(),
+      `€${c.revenue.toFixed(2)}`
+    ])
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Categoría', 'Unidades', 'Ingresos']],
+      body: categoryRows,
+      theme: 'grid',
+      headStyles: { fillColor: [220, 38, 38] }, // Red header
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        2: { halign: 'right' }
+      },
+      margin: { left: 14, right: 14 }
+    })
+
+    // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages()
+    for(let i = 1; i <= pageCount; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setTextColor(150, 150, 150)
+      doc.text('Documento generado automáticamente por Guantanamera', pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' })
+    }
+
+    doc.save(`Reporte_Ventas_${date}.pdf`)
   }
 
   return {
@@ -201,5 +345,6 @@ export function useSalesDashboard() {
     categoriesData,
     chartConfig,
     exportCSV,
+    exportPDF,
   }
 }

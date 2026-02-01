@@ -44,6 +44,7 @@ export default function SalesPage() {
     categoriesData,
     chartConfig,
     exportCSV,
+    exportPDF,
     source,
     setSource,
     fromDate,
@@ -310,13 +311,22 @@ export default function SalesPage() {
                     )}
                   </PopoverContent>
                 </Popover>
-                <Button
-                  variant="outline"
-                  onClick={exportCSV}
-                  className="h-10 flex-1 sm:flex-none px-4 rounded-xl border-2 font-bold hover:bg-gray-50"
-                >
-                  Exportar
-                </Button>
+                <div className="flex items-center gap-2 flex-1 sm:flex-none">
+                  <Button
+                    variant="outline"
+                    onClick={exportCSV}
+                    className="h-9 md:h-10 flex-1 px-3 md:px-4 rounded-xl border-2 font-medium text-xs md:text-sm hover:bg-gray-50"
+                  >
+                    CSV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={exportPDF}
+                    className="h-9 md:h-10 flex-1 px-3 md:px-4 rounded-xl border-2 font-medium text-xs md:text-sm hover:bg-gray-50 text-red-600 border-red-100 hover:border-red-200 hover:bg-red-50"
+                  >
+                    PDF
+                  </Button>
+                </div>
                 <ManualSaleModal onSuccess={fetchSales} />
               </div>
             </div>
