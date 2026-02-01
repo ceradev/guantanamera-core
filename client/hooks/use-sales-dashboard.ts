@@ -22,6 +22,8 @@ export function useSalesDashboard() {
   })
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all')
   const [source, setSource] = useState<string>('')
+  const [fromDate, setFromDate] = useState<string>('')
+  const [toDate, setToDate] = useState<string>('')
 
   const parseDate = (s: string) => {
     const [y, m, d] = s.split('-').map(Number)
@@ -59,7 +61,13 @@ export function useSalesDashboard() {
   const fetchSales = async () => {
     try {
       setLoading(true)
-      const res = await getSales(type, date, source || undefined)
+      const res = await getSales(
+        type,
+        date,
+        source || undefined,
+        type === 'custom' ? fromDate : undefined,
+        type === 'custom' ? toDate : undefined
+      )
       setData(res)
       lastDataSignatureRef.current = `${res.totalOrders}|${res.totalSales}`
       setError(null)
@@ -76,8 +84,10 @@ export function useSalesDashboard() {
   }
 
   useEffect(() => {
+    // For custom type, only fetch when both dates are set
+    if (type === 'custom' && (!fromDate || !toDate)) return
     fetchSales()
-  }, [type, date, source])
+  }, [type, date, source, fromDate, toDate])
 
   useNotifications({ onOrdersUpdated: fetchSales })
 
@@ -89,8 +99,11 @@ export function useSalesDashboard() {
     const end = new Date(data.end)
     if (type === 'day') return fmt(base)
     if (type === 'week') return `${fmt(start)} – ${fmt(end)}`
+    if (type === 'custom' && fromDate && toDate) {
+      return `${fmt(new Date(fromDate))} – ${fmt(new Date(toDate))}`
+    }
     return `${start.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`
-  }, [data, type, date])
+  }, [data, type, date, fromDate, toDate])
 
   const deltaSales = useMemo(() => {
     if (!data?.previous) return null
@@ -171,6 +184,10 @@ export function useSalesDashboard() {
     setSelectedCategoryId,
     source,
     setSource,
+    fromDate,
+    setFromDate,
+    toDate,
+    setToDate,
     parseDate,
     fmtISO,
     startOfWeekMonday,

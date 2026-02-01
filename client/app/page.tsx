@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react"
 import CreateOrderPage from "@/components/pages/create-order/create-order-page"
 import OrdersPage from "@/components/pages/orders/orders-page"
-import SalesPage from "@/components/pages/sales-page"
+import SalesPage from "@/components/pages/sales/sales-page"
 import MenuManagementPage from "@/components/pages/menu-management/menu-management-page"
-import SettingsPage from "@/components/pages/settings-page"
+import SettingsPage from "@/components/pages/settings/settings-page"
 import Sidebar from "@/components/layout/sidebar"
 import { getOrders } from "@/lib/api"
 import { useNotifications } from "@/hooks/use-notifications"
@@ -22,7 +22,7 @@ export default function Dashboard() {
       const res = await getOrders(undefined, 1, 50)
       const count = res.data.filter((o: any) => ["RECEIVED", "PREPARING"].includes(o.status)).length
       setNewOrderCount(count)
-    } catch {}
+    } catch { }
   }
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-export type SalesPeriod = 'day' | 'week' | 'month'
+export type SalesPeriod = 'day' | 'week' | 'month' | 'custom'
 
 export interface TodaySales {
   date: string
@@ -9,7 +9,7 @@ export interface TodaySales {
 }
 
 export interface SalesAggregate {
-  type: SalesPeriod
+  type: SalesPeriod | 'custom'
   start: string
   end: string
   totalSales: number

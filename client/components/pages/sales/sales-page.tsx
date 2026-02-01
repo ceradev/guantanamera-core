@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react"
+
 import { Card } from "@/components/ui/data-display/card"
 import { Badge } from "@/components/ui/data-display/badge"
 import { Euro, Package, CalendarRange } from "lucide-react"
@@ -16,7 +18,7 @@ import {
 } from "@/components/ui/data-display/chart"
 import { BarChart, Bar, XAxis, YAxis } from "recharts"
 import { useSalesDashboard } from "@/hooks/use-sales-dashboard"
-import { ManualSaleModal } from "./manual-sale-modal"
+import { ManualSaleModal } from "./components/manual-sale-modal"
 
 export default function SalesPage() {
   const {
@@ -44,7 +46,34 @@ export default function SalesPage() {
     exportCSV,
     source,
     setSource,
+    fromDate,
+    setFromDate,
+    toDate,
+    setToDate,
   } = useSalesDashboard()
+
+  // State for custom date range picker
+  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false)
+  const [tempFromDate, setTempFromDate] = useState<string>('')
+  const [tempToDate, setTempToDate] = useState<string>('')
+
+  // Sync temp dates when popover opens or type changes to custom
+  const handlePopoverOpen = (open: boolean) => {
+    setIsDatePopoverOpen(open)
+    if (open && type === 'custom') {
+      setTempFromDate(fromDate || '')
+      setTempToDate(toDate || '')
+    }
+  }
+
+  // Confirm custom date selection
+  const handleConfirmCustomDates = () => {
+    if (tempFromDate && tempToDate) {
+      setFromDate(tempFromDate)
+      setToDate(tempToDate)
+      setIsDatePopoverOpen(false)
+    }
+  }
 
   return (
     <div className="relative h-full min-h-0 flex flex-col bg-white">
@@ -92,8 +121,8 @@ export default function SalesPage() {
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-8">
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Ventas</h1>
-                  <p className="text-muted-foreground mt-1 text-sm md:text-base">Periodo: {periodLabel}</p>
+                  <h1 className="text-xl md:text-2xl font-bold text-gray-900">Ventas</h1>
+                  <p className="text-muted-foreground mt-1 text-xs md:text-sm">Periodo: {periodLabel}</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
@@ -115,6 +144,12 @@ export default function SalesPage() {
                       onClick={() => setType("month")}
                     >
                       Mes
+                    </button>
+                    <button
+                      className={`px-3 md:px-5 py-2 rounded-lg text-sm transition-all ${type === "custom" ? "bg-white border shadow-sm font-bold text-red-600" : "text-gray-500 hover:text-gray-700 font-medium"}`}
+                      onClick={() => setType("custom")}
+                    >
+                      Personalizado
                     </button>
                   </div>
 
@@ -142,18 +177,71 @@ export default function SalesPage() {
               </div>
 
               <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-                <Popover>
+                <Popover open={isDatePopoverOpen} onOpenChange={handlePopoverOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-10 flex-1 sm:flex-none flex items-center gap-2 px-4 rounded-xl border-2 font-medium">
+                    <Button variant="outline" className="h-9 md:h-10 flex-1 sm:flex-none flex items-center gap-2 px-3 md:px-4 rounded-xl border-2 font-medium text-xs md:text-sm">
                       <CalendarRange className="w-4 h-4 text-gray-500" />
                       <span className="whitespace-nowrap">{periodLabel || date}</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[calc(100vw-2rem)] sm:w-fit p-2" align="end">
                     <div className="text-sm font-bold mb-3 px-2">
-                      {type === "day" ? "Selecciona día" : type === "week" ? "Selecciona semana" : "Selecciona mes"}
+                      {type === "day" ? "Selecciona día" : type === "week" ? "Selecciona semana" : type === "month" ? "Selecciona mes" : "Selecciona rango personalizado"}
                     </div>
-                    {type === "month" ? (
+                    {type === "custom" ? (
+                      <div className="flex flex-col">
+                        <Calendar
+                          locale={es}
+                          weekStartsOn={1 as any}
+                          mode="range"
+                          className="p-0"
+                          selected={
+                            tempFromDate && tempToDate
+                              ? { from: new Date(tempFromDate), to: new Date(tempToDate) }
+                              : tempFromDate
+                                ? { from: new Date(tempFromDate), to: undefined }
+                                : undefined
+                          }
+                          onSelect={(range) => {
+                            if (range?.from) {
+                              setTempFromDate(fmtISO(range.from))
+                            }
+                            if (range?.to) {
+                              setTempToDate(fmtISO(range.to))
+                            } else if (range?.from && !range?.to) {
+                              setTempToDate('')
+                            }
+                          }}
+                          numberOfMonths={2}
+                          captionLayout="dropdown"
+                        />
+                        <div className="flex items-center justify-between mt-3 px-1">
+                          {tempFromDate && !tempToDate ? (
+                            <p className="text-xs text-muted-foreground">
+                              Selecciona la fecha de fin
+                            </p>
+                          ) : tempFromDate && tempToDate ? (
+                            <p className="text-sm text-gray-600">
+                              {new Date(tempFromDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                              {' – '}
+                              {new Date(tempToDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              Selecciona las fechas
+                            </p>
+                          )}
+                          <Button
+                            size="sm"
+                            disabled={!tempFromDate || !tempToDate}
+                            onClick={handleConfirmCustomDates}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
+                          >
+                            Confirmar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : type === "month" ? (
                       <div className="grid grid-cols-2 gap-2 p-1">
                         <select
                           className="border-2 rounded-xl px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none"
@@ -234,84 +322,84 @@ export default function SalesPage() {
             </div>
           </header>
 
-          <main className="flex-1 p-4 md:p-8 overflow-y-auto min-h-0 bg-gray-50/30">
+          <main className="flex-1 p-3 md:p-6 overflow-y-auto min-h-0 bg-gray-50/30">
             <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                <Card className="p-5 md:p-8 shadow-sm border-2 border-gray-100 rounded-2xl">
-                  <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Total vendido</p>
-                  <div className="mt-2 md:mt-3 flex items-center gap-3">
-                    <div className="p-2 bg-red-50 rounded-lg">
-                      <Euro className="w-5 h-5 md:w-8 md:h-8 text-red-600" />
+                <Card className="p-4 md:p-6 shadow-sm border-2 border-gray-100 rounded-2xl">
+                  <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">Total vendido</p>
+                  <div className="mt-2 flex items-center gap-2 md:gap-3">
+                    <div className="p-1.5 md:p-2 bg-red-50 rounded-lg">
+                      <Euro className="w-4 h-4 md:w-6 md:h-6 text-red-600" />
                     </div>
-                    <span className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight">
+                    <span className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">
                       €{data.totalSales.toFixed(2)}
                     </span>
                   </div>
                   {deltaSales !== null && (
-                    <Badge className={`mt-3 md:mt-4 text-xs font-bold px-2 py-1 ${deltaSales >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    <Badge className={`mt-2 md:mt-3 text-[10px] font-bold px-1.5 py-0.5 ${deltaSales >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                       {deltaSales >= 0 ? "+" : ""}{deltaSales.toFixed(1)}%
                     </Badge>
                   )}
                 </Card>
 
-                <Card className="p-5 md:p-8 shadow-sm border-2 border-gray-100 rounded-2xl">
-                  <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Nº de pedidos</p>
-                  <div className="mt-2 md:mt-3 flex items-center gap-3">
-                    <div className="p-2 bg-gray-50 rounded-lg">
-                      <Package className="w-5 h-5 md:w-8 md:h-8 text-gray-700" />
+                <Card className="p-4 md:p-6 shadow-sm border-2 border-gray-100 rounded-2xl">
+                  <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">Nº de pedidos</p>
+                  <div className="mt-2 flex items-center gap-2 md:gap-3">
+                    <div className="p-1.5 md:p-2 bg-gray-50 rounded-lg">
+                      <Package className="w-4 h-4 md:w-6 md:h-6 text-gray-700" />
                     </div>
-                    <span className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight">
+                    <span className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">
                       {data.totalOrders}
                     </span>
                   </div>
                   {deltaOrders !== null && (
-                    <Badge className={`mt-3 md:mt-4 text-xs font-bold px-2 py-1 ${deltaOrders >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    <Badge className={`mt-2 md:mt-3 text-[10px] font-bold px-1.5 py-0.5 ${deltaOrders >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                       {deltaOrders >= 0 ? "+" : ""}{deltaOrders.toFixed(1)}%
                     </Badge>
                   )}
                 </Card>
 
-                <Card className="p-5 md:p-8 shadow-sm border-2 border-gray-100 rounded-2xl">
-                  <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Ticket medio</p>
-                  <div className="mt-2 md:mt-3 flex items-center gap-3">
-                    <div className="p-2 bg-gray-50 rounded-lg">
-                      <Euro className="w-5 h-5 md:w-8 md:h-8 text-gray-700" />
+                <Card className="p-4 md:p-6 shadow-sm border-2 border-gray-100 rounded-2xl">
+                  <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">Ticket medio</p>
+                  <div className="mt-2 flex items-center gap-2 md:gap-3">
+                    <div className="p-1.5 md:p-2 bg-gray-50 rounded-lg">
+                      <Euro className="w-4 h-4 md:w-6 md:h-6 text-gray-700" />
                     </div>
-                    <span className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight">
+                    <span className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">
                       €{data.averageOrderValue.toFixed(2)}
                     </span>
                   </div>
                   {deltaAOV !== null && (
-                    <Badge className={`mt-3 md:mt-4 text-xs font-bold px-2 py-1 ${deltaAOV >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    <Badge className={`mt-2 md:mt-3 text-[10px] font-bold px-1.5 py-0.5 ${deltaAOV >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                       {deltaAOV >= 0 ? "+" : ""}{deltaAOV.toFixed(1)}%
                     </Badge>
                   )}
                 </Card>
 
-                <Card className="p-5 md:p-8 shadow-sm border-2 border-gray-100 rounded-2xl">
-                  <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Tasa de conversión</p>
-                  <div className="mt-2 md:mt-3 flex items-center gap-3">
-                    <span className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight">
+                <Card className="p-4 md:p-6 shadow-sm border-2 border-gray-100 rounded-2xl">
+                  <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">Tasa de conversión</p>
+                  <div className="mt-2 flex items-center gap-2 md:gap-3">
+                    <span className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">
                       {typeof data.conversionRate === "number" ? `${(data.conversionRate * 100).toFixed(1)}%` : "—"}
                     </span>
                   </div>
-                  <p className="text-[10px] md:text-xs text-muted-foreground mt-2 font-medium">Frecuencia: {typeof data.purchaseFrequencyPerDay === "number" ? data.purchaseFrequencyPerDay.toFixed(2) : "—"}/día</p>
+                  <p className="text-[10px] text-muted-foreground mt-2 font-medium">Frecuencia: {typeof data.purchaseFrequencyPerDay === "number" ? data.purchaseFrequencyPerDay.toFixed(2) : "—"}/día</p>
                 </Card>
               </section>
 
               <section className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <Card className="p-6 md:p-8 shadow-sm border-2 border-gray-100 rounded-2xl">
-                  <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Producto más vendido (unidades)</p>
-                  <div className="mt-4">
-                    <div className="text-lg md:text-xl font-bold text-gray-900">{data.topProductByUnits?.name || "—"}</div>
-                    <div className="text-red-600 font-bold mt-1 text-sm md:text-base">{data.topProductByUnits ? `${data.topProductByUnits.quantity} unidades` : ""}</div>
+                <Card className="p-4 md:p-6 shadow-sm border-2 border-gray-100 rounded-2xl">
+                  <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">Producto más vendido (unidades)</p>
+                  <div className="mt-2 md:mt-4">
+                    <div className="text-base md:text-lg font-bold text-gray-900">{data.topProductByUnits?.name || "—"}</div>
+                    <div className="text-red-600 font-bold mt-0.5 md:mt-1 text-xs md:text-sm">{data.topProductByUnits ? `${data.topProductByUnits.quantity} unidades` : ""}</div>
                   </div>
                 </Card>
-                <Card className="p-6 md:p-8 shadow-sm border-2 border-gray-100 rounded-2xl">
-                  <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Producto más vendido (ingresos)</p>
-                  <div className="mt-4">
-                    <div className="text-lg md:text-xl font-bold text-gray-900">{data.topProductByRevenue?.name || "—"}</div>
-                    <div className="text-red-600 font-bold mt-1 text-sm md:text-base">{data.topProductByRevenue ? `€${data.topProductByRevenue.revenue.toFixed(2)}` : ""}</div>
+                <Card className="p-4 md:p-6 shadow-sm border-2 border-gray-100 rounded-2xl">
+                  <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">Producto más vendido (ingresos)</p>
+                  <div className="mt-2 md:mt-4">
+                    <div className="text-base md:text-lg font-bold text-gray-900">{data.topProductByRevenue?.name || "—"}</div>
+                    <div className="text-red-600 font-bold mt-0.5 md:mt-1 text-xs md:text-sm">{data.topProductByRevenue ? `€${data.topProductByRevenue.revenue.toFixed(2)}` : ""}</div>
                   </div>
                 </Card>
               </section>
@@ -402,9 +490,9 @@ export default function SalesPage() {
                         <tbody>
                           {data.products.map((p) => (
                             <tr key={p.productId} className="border-b last:border-0 hover:bg-gray-50/50">
-                              <td className="px-6 py-4 font-medium text-gray-900">{p.name}</td>
-                              <td className="px-6 py-4 text-right">{p.quantity}</td>
-                              <td className="px-6 py-4 text-right font-bold">€{p.revenue.toFixed(2)}</td>
+                              <td className="px-4 py-3 md:px-6 md:py-4 font-medium text-gray-900">{p.name}</td>
+                              <td className="px-4 py-3 md:px-6 md:py-4 text-right">{p.quantity}</td>
+                              <td className="px-4 py-3 md:px-6 md:py-4 text-right font-bold">€{p.revenue.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>

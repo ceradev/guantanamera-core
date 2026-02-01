@@ -75,10 +75,10 @@ export const getTodaySales = async (): Promise<TodaySales> => {
   return result;
 };
 
-export type PeriodType = "day" | "week" | "month";
+export type PeriodType = "day" | "week" | "month" | "custom";
 
 export interface SalesAggregate {
-  type: PeriodType;
+  type: PeriodType | "custom";
   start: string;
   end: string;
   totalSales: number;
@@ -94,17 +94,29 @@ export interface SalesAggregate {
   previous?: { totalSales: number; totalOrders: number; averageOrderValue: number };
 }
 
-export const getAggregatedSales = async (type: PeriodType, baseDate?: Date, source?: SaleSource): Promise<SalesAggregate> => {
+export const getAggregatedSales = async (
+  type: PeriodType | "custom",
+  baseDate?: Date,
+  source?: SaleSource,
+  fromDate?: Date,
+  toDate?: Date
+): Promise<SalesAggregate> => {
   const date = baseDate ?? new Date();
 
-  const start = new Date(date);
-  const end = new Date(date);
+  let start = new Date(date);
+  let end = new Date(date);
 
   // Start/End of Day
   const setStartOfDay = (d: Date) => d.setHours(0, 0, 0, 0);
   const setEndOfDay = (d: Date) => d.setHours(23, 59, 59, 999);
 
-  if (type === "day") {
+  if (type === "custom" && fromDate && toDate) {
+    // Custom date range
+    start = new Date(fromDate);
+    end = new Date(toDate);
+    setStartOfDay(start);
+    setEndOfDay(end);
+  } else if (type === "day") {
     setStartOfDay(start);
     setEndOfDay(end);
   } else if (type === "week") {

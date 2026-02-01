@@ -14,10 +14,15 @@ export const getToday = async (_req: Request, res: Response) => {
 
 export const getAggregated = async (req: Request, res: Response) => {
   try {
-    const { type, date, source } = (req as any).validated?.query ?? req.query;
+    const { type, date, source, from, to } = (req as any).validated?.query ?? req.query;
     const baseDate = date ? new Date(date as string) : new Date();
     const period = (type as PeriodType) ?? "day";
-    const stats = await getAggregatedSales(period, baseDate, source as SaleSource);
+    
+    // Parse custom date range
+    const fromDate = from ? new Date(from as string) : undefined;
+    const toDate = to ? new Date(to as string) : undefined;
+    
+    const stats = await getAggregatedSales(period, baseDate, source as SaleSource, fromDate, toDate);
     res.json(stats);
   } catch (error: any) {
     logger.error(`Error fetching aggregated sales: ${error.message}`);
