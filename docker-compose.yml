@@ -1,19 +1,15 @@
 services:
   postgres:
     image: postgres:16
-    container_name: guantanamera-core-db
-    ports:
-      - "5432:5432"
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-guantanamera_core}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: app_db
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: example_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   api:
-    container_name: guantanamera-core-api
     build:
       context: ./server
     restart: unless-stopped
@@ -22,34 +18,22 @@ services:
     environment:
       NODE_ENV: production
       PORT: 8000
-      DATABASE_URL: ${DATABASE_URL}
-      ADMIN_API_KEY: ${ADMIN_API_KEY}
-      SENTRY_DSN: ${SENTRY_DSN}
-    ports:
-      - "8000:8000"
+      DATABASE_URL: postgresql://app_user:example_password@postgres:5432/app_db
     command: >
       sh -c "
-        pnpm run prisma:migrate &&
-        pnpm run prisma:seed &&
         pnpm run start
       "
 
   dashboard:
-    container_name: guantanamera-dashboard
     build:
       context: ./client
-      args:
-        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
     restart: unless-stopped
     depends_on:
       - api
     environment:
       NODE_ENV: production
       PORT: 3000
-      NEXT_PUBLIC_API_URL: https://api.barguantanamera.com
-      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
-    ports:
-      - "3000:3000"
+      NEXT_PUBLIC_API_URL: https://api.example.com
 
 volumes:
   postgres_data:

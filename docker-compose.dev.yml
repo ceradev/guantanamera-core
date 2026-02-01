@@ -4,8 +4,8 @@ services:
     container_name: guantanamera-core-db-dev
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-guantanamera_core}
-      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: guantanamera_core
+      POSTGRES_USER: guantanamera
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
@@ -22,7 +22,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://guantanamera:${POSTGRES_PASSWORD}@postgres:5432/guantanamera_core
     volumes:
       - ./:/app
       - /app/node_modules
