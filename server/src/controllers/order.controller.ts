@@ -37,7 +37,13 @@ export const createOrder = async (req: Request, res: Response) => {
       "Orders are currently disabled",
       "Pickup time must be",
       "Minimum preparation time",
-      "at least one item"
+      "at least one item",
+      // Spanish error messages from order.service.ts
+      "establecimiento está cerrado",
+      "establecimiento permanece cerrado",
+      "horario para hoy no está configurado",
+      "hora de recogida debe estar entre",
+      "tiempo mínimo de preparación"
     ];
 
     if (knownErrors.some(msg => error.message.includes(msg))) {
