@@ -52,3 +52,41 @@ export async function deleteInvoice(id: string): Promise<void> {
     method: 'DELETE',
   }, true)
 }
+
+/**
+ * Scan invoice using OCR + AI
+ */
+export async function scanInvoice(file: File): Promise<import('@/types').InvoiceScanResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  // Use fetchAPI but with FormData body (no JSON stringify)
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'
+  const apiKey = process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''
+  
+  const response = await fetch(`${apiUrl}/invoices/scan`, {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+    },
+    body: formData,
+  })
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Error al escanear' }))
+    throw new Error(error.error || 'Error al escanear factura')
+  }
+  
+  return response.json()
+}
+
+/**
+ * Check scanner service status
+ */
+export async function checkScannerStatus(): Promise<{
+  environment: string
+  services: { ocr: boolean; llm: boolean }
+}> {
+  return fetchAPI('/invoices/scan/status', {}, true)
+}
+

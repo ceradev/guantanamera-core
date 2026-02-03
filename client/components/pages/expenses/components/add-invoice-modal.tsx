@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/inputs/input"
 import { Plus, Trash2, Euro, Loader2 } from "lucide-react"
 import { createInvoice } from "@/services"
 import { format } from "date-fns"
-import type { ExpenseCategory, CreateInvoiceInput } from "@/types"
+import type { ExpenseCategory, CreateInvoiceInput, ScannedInvoiceData } from "@/types"
 import { EXPENSE_CATEGORY_LABELS } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 
@@ -27,9 +27,11 @@ interface AddInvoiceModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     onSuccess: () => void
+    initialData?: ScannedInvoiceData | null
+    isFromScan?: boolean
 }
 
-export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceModalProps) {
+export function AddInvoiceModal({ open, onOpenChange, onSuccess, initialData, isFromScan }: AddInvoiceModalProps) {
     const { toast } = useToast()
     const [loading, setLoading] = useState(false)
     const [date, setDate] = useState("")
@@ -48,9 +50,37 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
         }
     }, [date])
 
+    // Populate form with initial data from scanner
+    useEffect(() => {
+        if (initialData && open) {
+            if (initialData.supplier) setSupplier(initialData.supplier)
+            if (initialData.date) setDate(initialData.date)
+            if (initialData.reference) setReference(initialData.reference)
+            if (initialData.category) {
+                // Validate category is a valid ExpenseCategory
+                const validCategories: ExpenseCategory[] = ["FOOD", "DRINKS", "SUPPLIES", "RENT", "UTILITIES", "MAINTENANCE", "OTHER"]
+                if (validCategories.includes(initialData.category as ExpenseCategory)) {
+                    setCategory(initialData.category as ExpenseCategory)
+                }
+            }
+            if (initialData.items && initialData.items.length > 0) {
+                setItems(initialData.items.map(item => ({
+                    description: item.description || "",
+                    quantity: item.quantity || 1,
+                    unitPrice: item.unitPrice || 0,
+                })))
+            }
+        }
+    }, [initialData, open])
+
+    // IGIC tax rate (Canarias) - 7%
+    const IGIC_RATE = 0.07
+
     // Calculate totals
     const calculateItemTotal = (item: InvoiceItemInput) => item.quantity * item.unitPrice
-    const totalAmount = items.reduce((sum, item) => sum + calculateItemTotal(item), 0)
+    const subtotal = items.reduce((sum, item) => sum + calculateItemTotal(item), 0)
+    const igicAmount = Math.round(subtotal * IGIC_RATE * 100) / 100
+    const totalAmount = Math.round((subtotal + igicAmount) * 100) / 100
 
     // Add new item
     const addItem = useCallback(() => {
@@ -122,8 +152,26 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="overflow-y-auto max-h-[90vh] w-full max-w-4xl bg-white p-6 md:p-8 rounded-2xl">
                 <DialogHeader className="mb-4">
-                    <DialogTitle className="text-2xl font-bold text-gray-900">Añadir Factura</DialogTitle>
+                    <DialogTitle className="text-2xl font-bold text-gray-900">
+                        {isFromScan ? "Revisar Factura Escaneada" : "Añadir Factura"}
+                    </DialogTitle>
                 </DialogHeader>
+
+                {isFromScan && (
+                    <div className="mb-6 flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <div className="p-1.5 bg-amber-100 rounded-full shrink-0">
+                            <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="font-bold text-amber-800 text-sm">Datos detectados automáticamente</p>
+                            <p className="text-amber-700 text-sm mt-0.5">
+                                Revisa y corrige los datos antes de guardar. Todos los campos son editables.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Left Column: Form Details */}
@@ -213,8 +261,8 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
                         <div className="space-y-3 max-h-[300px] md:max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                             {items.map((item, index) => (
                                 <div key={index} className="flex items-end gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                        <div className="sm:col-span-1 space-y-1">
+                                    <div className="flex-1 grid grid-cols-12 gap-2">
+                                        <div className="col-span-12 sm:col-span-6 space-y-1">
                                             <p className="text-xs font-bold text-gray-500 ml-1">Descripción</p>
                                             <Input
                                                 type="text"
@@ -224,7 +272,7 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
                                                 className="h-10 rounded-lg"
                                             />
                                         </div>
-                                        <div className="space-y-1">
+                                        <div className="col-span-6 sm:col-span-3 space-y-1">
                                             <p className="text-xs font-bold text-gray-500 ml-1">Cantidad</p>
                                             <Input
                                                 type="number"
@@ -235,7 +283,7 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
                                                 className="h-10 rounded-lg text-center font-bold"
                                             />
                                         </div>
-                                        <div className="space-y-1">
+                                        <div className="col-span-6 sm:col-span-3 space-y-1">
                                             <p className="text-xs font-bold text-gray-500 ml-1">Precio €</p>
                                             <Input
                                                 type="number"
@@ -274,6 +322,22 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+
+                {/* Totals with IGIC */}
+                <div className="bg-gray-50 rounded-xl p-4 mt-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Subtotal</span>
+                        <span className="font-medium">€{subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">IGIC (7%)</span>
+                        <span className="font-medium">€{igicAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-base font-bold border-t border-gray-200 pt-2 mt-2">
+                        <span>Total</span>
+                        <span className="text-red-600">€{totalAmount.toFixed(2)}</span>
                     </div>
                 </div>
 

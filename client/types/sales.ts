@@ -25,3 +25,30 @@ export interface SalesAggregate {
   previous?: { totalSales: number; totalOrders: number; averageOrderValue: number }
 }
 
+// AI Scanner types
+export interface ScannedSaleItem {
+  productId: number
+  name: string
+  quantity: number
+  unitPrice: number
+}
+
+export interface ScannedSaleData {
+  success: boolean
+  totalDetected: number | null
+  dateDetected: string | null
+  suggestedItems: ScannedSaleItem[]
+  approximateTotal: number
+  confidence: number
+  notes: string | null
+  rawText?: string
+  ocrConfidence?: number
+  error?: string
+}
+
+export interface SalesScannerStatus {
+  available: boolean
+  ocr: boolean
+  llm: boolean
+  products: number
+}

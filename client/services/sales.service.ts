@@ -1,5 +1,5 @@
 import { fetchAPI } from '@/lib/api'
-import type { SalesAggregate, SalesPeriod, TodaySales } from '@/types'
+import type { SalesAggregate, SalesPeriod, TodaySales, ScannedSaleData, SalesScannerStatus } from '@/types'
 
 /**
  * Obtiene las ventas del día.
@@ -46,3 +46,41 @@ export async function createManualSale(data: CreateManualSaleInput): Promise<any
   }, true)
 }
 
+// AI Scanner functions
+
+/**
+ * Scan a sales ticket and get AI product suggestions
+ * @param file Image file of the sales ticket
+ * @returns Suggested products and metadata
+ */
+export async function scanSalesTicket(file: File): Promise<ScannedSaleData> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('language', 'spa')
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+  const apiKey = process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''
+
+  const response = await fetch(`${apiUrl}/sales/scan`, {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Error de red' }))
+    throw new Error(error.error || 'Error al escanear el ticket')
+  }
+
+  return response.json()
+}
+
+/**
+ * Check if the sales AI scanner is available
+ * @returns Scanner availability status
+ */
+export async function getSalesScannerStatus(): Promise<SalesScannerStatus> {
+  return fetchAPI<SalesScannerStatus>('/sales/scan/status', {}, true)
+}

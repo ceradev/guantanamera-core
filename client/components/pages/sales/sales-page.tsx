@@ -19,6 +19,9 @@ import {
 import { BarChart, Bar, XAxis, YAxis } from "recharts"
 import { useSalesDashboard } from "@/hooks/use-sales-dashboard"
 import { ManualSaleModal } from "./components/manual-sale-modal"
+import { ScanSaleModal } from "./components/scan-sale-modal"
+import { ScannedSaleData } from "@/types"
+import { Camera, Plus } from "lucide-react"
 
 export default function SalesPage() {
   const {
@@ -57,6 +60,11 @@ export default function SalesPage() {
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false)
   const [tempFromDate, setTempFromDate] = useState<string>('')
   const [tempToDate, setTempToDate] = useState<string>('')
+
+  // Scanner state
+  const [isScanOpen, setIsScanOpen] = useState(false)
+  const [isManualOpen, setIsManualOpen] = useState(false)
+  const [scannedData, setScannedData] = useState<ScannedSaleData | null>(null)
 
   // Sync temp dates when popover opens or type changes to custom
   const handlePopoverOpen = (open: boolean) => {
@@ -327,7 +335,50 @@ export default function SalesPage() {
                     PDF
                   </Button>
                 </div>
-                <ManualSaleModal onSuccess={fetchSales} />
+
+
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsScanOpen(true)}
+                    className="h-9 md:h-10 px-3 md:px-4 rounded-xl border-2 hover:bg-gray-50 text-gray-600 gap-2 font-bold text-xs md:text-sm"
+                    title="Escanear ticket con IA"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span className="hidden sm:inline">Escanear</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      setScannedData(null)
+                      setIsManualOpen(true)
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl h-9 md:h-10 px-3 md:px-4 flex items-center gap-2 text-xs md:text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Añadir venta</span>
+                  </Button>
+                </div>
+
+                <ManualSaleModal
+                  open={isManualOpen}
+                  onOpenChange={setIsManualOpen}
+                  onSuccess={() => {
+                    fetchSales()
+                    setScannedData(null)
+                  }}
+                  initialData={scannedData}
+                />
+
+                <ScanSaleModal
+                  open={isScanOpen}
+                  onOpenChange={setIsScanOpen}
+                  onScanComplete={(data) => {
+                    setScannedData(data)
+                    setIsManualOpen(true)
+                  }}
+                />
               </div>
             </div>
           </header>
@@ -513,7 +564,7 @@ export default function SalesPage() {
               )}
             </div>
           </main>
-        </div>
+        </div >
       ) : (
         <main className="flex-1 p-4 md:p-8 flex items-center justify-center bg-gray-50/30">
           <Card className="p-10 text-center shadow-xl border-2 border-gray-100 rounded-3xl max-w-md w-full">
@@ -530,7 +581,8 @@ export default function SalesPage() {
             </Button>
           </Card>
         </main>
-      )}
-    </div>
+      )
+      }
+    </div >
   )
 }

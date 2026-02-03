@@ -11,23 +11,31 @@ import {
     DialogTrigger,
     DialogFooter,
 } from "@/components/ui/overlays/dialog"
-import { Plus, Trash2, Loader2 } from "lucide-react"
+import { Plus, Trash2, Loader2, AlertTriangle, Sparkles } from "lucide-react"
 import { createManualSale } from "@/services/sales.service"
 import { getProducts } from "@/services/products.service"
 import { useToast } from "@/hooks/use-toast"
-import { Product } from "@/types"
+import { Product, ScannedSaleData } from "@/types"
 
 interface ManualSaleModalProps {
     onSuccess: () => void
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    initialData?: ScannedSaleData | null
 }
 
-export function ManualSaleModal({ onSuccess }: ManualSaleModalProps) {
-    const [open, setOpen] = useState(false)
+export function ManualSaleModal({ onSuccess, open: controlledOpen, onOpenChange, initialData }: ManualSaleModalProps) {
+    const [internalOpen, setInternalOpen] = useState(false)
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen
+    const setOpen = onOpenChange || setInternalOpen
+
     const [loading, setLoading] = useState(false)
     const [products, setProducts] = useState<Product[]>([])
     const [date, setDate] = useState(new Date().toISOString().split("T")[0])
     const [items, setItems] = useState<{ productId: number; quantity: number }[]>([])
     const [notes, setNotes] = useState("")
+    const [isFromAI, setIsFromAI] = useState(false)
+    const [aiConfidence, setAiConfidence] = useState(0)
     const { toast } = useToast()
 
     useEffect(() => {
@@ -35,6 +43,38 @@ export function ManualSaleModal({ onSuccess }: ManualSaleModalProps) {
             loadProducts()
         }
     }, [open])
+
+    // Pre-fill with scanned data
+    useEffect(() => {
+        if (initialData && open) {
+            setIsFromAI(true)
+            setAiConfidence(initialData.confidence)
+
+            // Set date if detected
+            if (initialData.dateDetected) {
+                setDate(initialData.dateDetected)
+            }
+
+            // Set items from suggestions
+            if (initialData.suggestedItems && initialData.suggestedItems.length > 0) {
+                setItems(initialData.suggestedItems.map(item => ({
+                    productId: item.productId,
+                    quantity: item.quantity
+                })))
+            }
+
+            // Set notes with AI info
+            const aiNote = initialData.notes || "Productos sugeridos por IA"
+            setNotes(aiNote)
+        } else if (!open) {
+            // Reset when closed
+            setIsFromAI(false)
+            setAiConfidence(0)
+            setItems([])
+            setNotes("")
+            setDate(new Date().toISOString().split("T")[0])
+        }
+    }, [initialData, open])
 
     const loadProducts = async () => {
         try {
@@ -80,6 +120,7 @@ export function ManualSaleModal({ onSuccess }: ManualSaleModalProps) {
             setOpen(false)
             setItems([])
             setNotes("")
+            setIsFromAI(false)
             onSuccess()
         } catch (error) {
             console.error(error)
@@ -96,18 +137,47 @@ export function ManualSaleModal({ onSuccess }: ManualSaleModalProps) {
         }, 0)
     }
 
+    // Determine if this is a standalone modal or controlled
+    const isControlled = controlledOpen !== undefined
+
+    const triggerButton = !isControlled ? (
+        <DialogTrigger asChild>
+            <Button className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl px-4 py-2 flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Añade venta
+            </Button>
+        </DialogTrigger>
+    ) : null
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl px-4 py-2 flex items-center gap-2">
-                    <Plus className="w-4 h-4" />
-                    Añade venta
-                </Button>
-            </DialogTrigger>
+            {triggerButton}
             <DialogContent className="overflow-y-auto max-h-[90vh] w-full max-w-4xl bg-white p-6 md:p-8 rounded-2xl">
                 <DialogHeader className="mb-4">
-                    <DialogTitle className="text-2xl font-bold text-gray-900">Añadir Venta Manual</DialogTitle>
+                    <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        {isFromAI && <Sparkles className="w-5 h-5 text-amber-500" />}
+                        {isFromAI ? "Revisar Venta Escaneada" : "Añadir Venta Manual"}
+                    </DialogTitle>
                 </DialogHeader>
+
+                {/* AI Warning Banner */}
+                {isFromAI && (
+                    <div className={`mb-6 p-4 rounded-xl border ${aiConfidence < 0.5 ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
+                        <div className="flex gap-3">
+                            <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${aiConfidence < 0.5 ? 'text-amber-600' : 'text-blue-600'}`} />
+                            <div className="text-sm">
+                                <p className={`font-semibold mb-1 ${aiConfidence < 0.5 ? 'text-amber-800' : 'text-blue-800'}`}>
+                                    Productos sugeridos por IA {aiConfidence < 0.5 && "• Confianza Baja"}
+                                </p>
+                                <p className={`${aiConfidence < 0.5 ? 'text-amber-700' : 'text-blue-700'} opacity-80`}>
+                                    Confianza: {Math.round(aiConfidence * 100)}%.
+                                    <strong> Revisa los productos antes de guardar.</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Left Column: Form Details */}
                     <div className="space-y-6">

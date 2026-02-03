@@ -22,6 +22,9 @@ export interface InvoiceFilters {
   category?: ExpenseCategory;
 }
 
+// IGIC tax rate (Canarias) - 7%
+const IGIC_RATE = 0.07;
+
 /**
  * Create a new invoice with items
  */
@@ -32,7 +35,11 @@ export async function createInvoice(data: CreateInvoiceInput) {
     totalPrice: item.quantity * item.unitPrice,
   }));
 
-  const totalAmount = itemsWithTotal.reduce((sum, item) => sum + item.totalPrice, 0);
+  const subtotal = itemsWithTotal.reduce((sum, item) => sum + item.totalPrice, 0);
+  
+  // Apply IGIC (7%) to the total
+  const igicAmount = Math.round(subtotal * IGIC_RATE * 100) / 100;
+  const totalAmount = Math.round((subtotal + igicAmount) * 100) / 100;
 
   return prisma.invoice.create({
     data: {

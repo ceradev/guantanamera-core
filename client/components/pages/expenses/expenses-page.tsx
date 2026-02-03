@@ -14,13 +14,15 @@ import {
     Plus,
     Trash2,
     FileText,
+    ScanLine,
 } from "lucide-react"
 import { es } from "date-fns/locale"
 import { format, startOfMonth, endOfMonth } from "date-fns"
 import { getInvoices, deleteInvoice as deleteInvoiceApi } from "@/services"
-import type { Invoice, ExpenseCategory, InvoicesResponse } from "@/types"
+import type { Invoice, ExpenseCategory, InvoicesResponse, ScannedInvoiceData } from "@/types"
 import { EXPENSE_CATEGORY_LABELS } from "@/types"
 import { AddInvoiceModal } from "./components/add-invoice-modal"
+import { ScanInvoiceModal } from "./components/scan-invoice-modal"
 
 export default function ExpensesPage() {
     // Client-side hydration state
@@ -38,6 +40,9 @@ export default function ExpensesPage() {
 
     // Modal state
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+    const [isScanModalOpen, setIsScanModalOpen] = useState(false)
+    const [scannedData, setScannedData] = useState<ScannedInvoiceData | null>(null)
+    const [isFromScan, setIsFromScan] = useState(false)
 
     // Data state
     const [data, setData] = useState<InvoicesResponse | null>(null)
@@ -111,7 +116,23 @@ export default function ExpensesPage() {
     // Modal success handler
     const handleModalSuccess = () => {
         setIsAddModalOpen(false)
+        setScannedData(null)
+        setIsFromScan(false)
         fetchData()
+    }
+
+    // Scan complete handler
+    const handleScanComplete = (data: ScannedInvoiceData) => {
+        setScannedData(data)
+        setIsFromScan(true)
+        setIsAddModalOpen(true)
+    }
+
+    // Open manual add modal
+    const handleOpenManualAdd = () => {
+        setScannedData(null)
+        setIsFromScan(false)
+        setIsAddModalOpen(true)
     }
 
     // Period label - only calculate when dates are available
@@ -179,7 +200,7 @@ export default function ExpensesPage() {
 
                                 <div className="flex flex-wrap items-center gap-4">
                                     {/* Category filter */}
-                                    <div className="flex items-center gap-1 bg-gray-50 border rounded-xl p-1 w-fit overflow-x-auto">
+                                    <div className="flex flex-wrap items-center gap-1 bg-gray-50 border rounded-xl p-1 w-full sm:w-fit">
                                         <button
                                             className={`px-3 md:px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${!category ? "bg-white border shadow-sm font-bold text-gray-900" : "text-gray-500 hover:text-gray-700 font-medium"}`}
                                             onClick={() => setCategory("")}
@@ -199,13 +220,13 @@ export default function ExpensesPage() {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                            <div className="flex items-center gap-2 flex-nowrap shrink-0 ml-auto w-full sm:w-auto justify-end">
                                 {/* Date picker */}
                                 <Popover open={isDatePopoverOpen} onOpenChange={handlePopoverOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" className="h-9 md:h-10 flex-1 sm:flex-none flex items-center gap-2 px-3 md:px-4 rounded-xl border-2 font-medium text-xs md:text-sm">
-                                            <CalendarRange className="w-4 h-4 text-gray-500" />
-                                            <span className="whitespace-nowrap">{periodLabel}</span>
+                                        <Button variant="outline" className="h-9 md:h-10 shrink min-w-0 flex items-center gap-2 px-2 md:px-4 rounded-xl border-2 font-medium text-xs md:text-sm overflow-hidden flex-1 sm:flex-none">
+                                            <CalendarRange className="w-4 h-4 text-gray-500 shrink-0" />
+                                            <span className="whitespace-nowrap truncate">{periodLabel}</span>
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[calc(100vw-2rem)] sm:w-fit p-2" align="end">
@@ -267,13 +288,22 @@ export default function ExpensesPage() {
                                     </PopoverContent>
                                 </Popover>
 
-                                {/* Add invoice button */}
+                                {/* Action buttons */}
                                 <Button
-                                    onClick={() => setIsAddModalOpen(true)}
-                                    className="h-9 md:h-10 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm flex items-center gap-2"
+                                    onClick={() => setIsScanModalOpen(true)}
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-9 w-9 md:h-10 md:w-10 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-50 shrink-0"
+                                    title="Escanear factura"
+                                >
+                                    <ScanLine className="w-5 h-5" />
+                                </Button>
+                                <Button
+                                    onClick={handleOpenManualAdd}
+                                    className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl h-9 md:h-10 px-3 md:px-4 flex items-center gap-2 text-xs md:text-sm whitespace-nowrap shrink-0"
                                 >
                                     <Plus className="w-4 h-4" />
-                                    Añadir Factura
+                                    <span className="hidden sm:inline">Añadir Factura</span>
                                 </Button>
                             </div>
                         </div>
@@ -362,7 +392,7 @@ export default function ExpensesPage() {
                                     </div>
                                     <Button
                                         className="mt-8 h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700"
-                                        onClick={() => setIsAddModalOpen(true)}
+                                        onClick={handleOpenManualAdd}
                                     >
                                         <Plus className="w-4 h-4 mr-2" />
                                         Añadir primera factura
@@ -379,6 +409,15 @@ export default function ExpensesPage() {
                 open={isAddModalOpen}
                 onOpenChange={setIsAddModalOpen}
                 onSuccess={handleModalSuccess}
+                initialData={scannedData}
+                isFromScan={isFromScan}
+            />
+
+            {/* Scan invoice modal */}
+            <ScanInvoiceModal
+                open={isScanModalOpen}
+                onOpenChange={setIsScanModalOpen}
+                onScanComplete={handleScanComplete}
             />
         </div>
     )
