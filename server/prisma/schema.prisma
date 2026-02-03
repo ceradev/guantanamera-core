@@ -95,3 +95,37 @@ enum SaleSource {
   ORDER
   MANUAL
 }
+
+enum ExpenseCategory {
+  FOOD
+  DRINKS
+  SUPPLIES
+  RENT
+  UTILITIES
+  MAINTENANCE
+  OTHER
+}
+
+model Invoice {
+  id          String          @id @default(uuid())
+  date        DateTime
+  supplier    String
+  reference   String?
+  totalAmount Float
+  category    ExpenseCategory
+  notes       String?
+  createdAt   DateTime        @default(now())
+
+  items InvoiceItem[]
+}
+
+model InvoiceItem {
+  id          String @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Int
+  unitPrice   Float
+  totalPrice  Float
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}

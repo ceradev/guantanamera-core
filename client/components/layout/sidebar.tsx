@@ -6,6 +6,7 @@ import {
   UtensilsCrossed,
   ChefHat,
   TrendingUp,
+  Wallet,
   Settings,
   Menu,
   X,
@@ -53,6 +54,12 @@ export default function Sidebar({
       icon: TrendingUp,
       label: "Ventas",
       description: "Análisis de ventas"
+    },
+    {
+      id: "expenses" as Page,
+      icon: Wallet,
+      label: "Gastos",
+      description: "Control de costes"
     },
     {
       id: "menu-management" as Page,
@@ -158,7 +165,7 @@ export default function Sidebar({
                       isActive ? "text-red-600" : "text-gray-500 group-hover:text-gray-700"
                     )}
                   />
-                  
+
                   {/* Collapsed Badge Bubble - Superpuesto al icono */}
                   {isCollapsed && item.badge !== undefined && (
                     <div className="absolute -top-1.5 -right-1.5 z-50 pointer-events-none">
