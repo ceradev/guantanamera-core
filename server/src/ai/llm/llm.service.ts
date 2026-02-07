@@ -13,7 +13,7 @@ export interface LlmConfig {
 
 const DEFAULT_CONFIG: LlmConfig = {
   baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
-  model: process.env.OLLAMA_MODEL || "mistral",
+  model: process.env.OLLAMA_MODEL || "llama3.1:latest",
   timeout: 120000, // 2 minutes for slow models
 };
 
@@ -57,7 +57,7 @@ export class LlmService {
     try {
       const response = await fetch(`${this.config.baseUrl}/api/tags`);
       if (!response.ok) throw new Error("Failed to fetch models");
-      
+
       const data = await response.json();
       return data.models?.map((m: any) => m.name) || [];
     } catch (error: any) {
@@ -107,10 +107,10 @@ export class LlmService {
       let parsed: Record<string, any> | null = null;
       try {
         // Extract JSON from response (handle markdown code blocks)
-        const jsonMatch = raw.match(/```json\s*([\s\S]*?)\s*```/) || 
-                         raw.match(/```\s*([\s\S]*?)\s*```/) ||
-                         [null, raw];
-        
+        const jsonMatch = raw.match(/```json\s*([\s\S]*?)\s*```/) ||
+          raw.match(/```\s*([\s\S]*?)\s*```/) ||
+          [null, raw];
+
         const jsonStr = jsonMatch[1] || raw;
         parsed = JSON.parse(jsonStr.trim());
       } catch {
