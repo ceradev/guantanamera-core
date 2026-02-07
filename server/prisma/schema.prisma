@@ -11,6 +11,17 @@ enum Role {
   EMPLOYEE
 }
 
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(EMPLOYEE)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum OrderStatus {
   RECEIVED
   PREPARING

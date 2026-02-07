@@ -55,8 +55,8 @@ export function StepProducts({ onNext }: StepProductsProps) {
     fetchCategories()
   }, [])
 
-  useNotifications({ 
-    onProductsUpdated: fetchCategories 
+  useNotifications({
+    onProductsUpdated: fetchCategories
   })
 
   if (isLoading && !hasError) {
@@ -80,7 +80,7 @@ export function StepProducts({ onNext }: StepProductsProps) {
             <Skeleton width={180} height={32} />
           </div>
           <div className="flex-1 overflow-y-auto p-6">
-            <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="relative flex flex-col justify-between h-48 p-5 rounded-2xl border-2 bg-white">
                   <div className="space-y-1">
@@ -137,24 +137,24 @@ export function StepProducts({ onNext }: StepProductsProps) {
             setIsLoading(true)
             setHasError(false)
             errorToastShownRef.current = false
-            // Retry fetch
-            ;(async () => {
-              try {
-                const data = await getCategories()
-                setCategories(data)
-                if (data.length > 0) {
-                  setSelectedCategory(data[0].name)
+              // Retry fetch
+              ; (async () => {
+                try {
+                  const data = await getCategories()
+                  setCategories(data)
+                  if (data.length > 0) {
+                    setSelectedCategory(data[0].name)
+                  }
+                } catch (error) {
+                  setHasError(true)
+                  if (!errorToastShownRef.current) {
+                    handleApiError(error, "los productos")
+                    errorToastShownRef.current = true
+                  }
+                } finally {
+                  setIsLoading(false)
                 }
-              } catch (error) {
-                setHasError(true)
-                if (!errorToastShownRef.current) {
-                  handleApiError(error, "los productos")
-                  errorToastShownRef.current = true
-                }
-              } finally {
-                setIsLoading(false)
-              }
-            })()
+              })()
           }}
         />
       </div>
@@ -201,7 +201,7 @@ export function StepProducts({ onNext }: StepProductsProps) {
                 ))}
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-4 bg-gray-50/30">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20">
                 {filteredProducts.map((product) => {
@@ -225,7 +225,7 @@ export function StepProducts({ onNext }: StepProductsProps) {
                           {product.name}
                         </div>
                       </div>
-                      
+
                       <div className="flex justify-between items-end mt-4">
                         <span className="text-xl font-bold text-gray-900">€{product.price.toFixed(2)}</span>
                         {inCart ? (
@@ -254,8 +254,8 @@ export function StepProducts({ onNext }: StepProductsProps) {
                   </div>
                   <p className="text-lg font-medium">El carrito está vacío</p>
                   <p className="text-sm">Selecciona productos del menú</p>
-                  <Button 
-                    variant="link" 
+                  <Button
+                    variant="link"
                     className="mt-4 text-red-600"
                     onClick={() => setActiveTab("menu")}
                   >
@@ -292,7 +292,7 @@ export function StepProducts({ onNext }: StepProductsProps) {
                 ))
               )}
             </div>
-            
+
             <div className="p-4 border-t bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] space-y-4 z-20">
               {items.length > 0 && (
                 <div className="flex justify-between items-center text-sm text-muted-foreground px-1">
@@ -304,8 +304,8 @@ export function StepProducts({ onNext }: StepProductsProps) {
                 <span className="text-muted-foreground font-medium text-lg">Total</span>
                 <span className="text-4xl font-black text-gray-900">€{total.toFixed(2)}</span>
               </div>
-              <Button 
-                className="w-full h-14 text-xl font-bold shadow-lg bg-red-600 hover:bg-red-700 rounded-xl" 
+              <Button
+                className="w-full h-14 text-xl font-bold shadow-lg bg-red-600 hover:bg-red-700 rounded-xl"
                 disabled={items.length === 0}
                 onClick={onNext}
               >
@@ -338,12 +338,12 @@ export function StepProducts({ onNext }: StepProductsProps) {
               >
                 <span>{category.name}</span>
                 {category.products && category.products.length > 0 && (
-                  <Badge 
-                    variant="secondary" 
+                  <Badge
+                    variant="secondary"
                     className={cn(
                       "transition-colors",
-                      selectedCategory === category.name 
-                        ? "bg-red-100 text-red-700" 
+                      selectedCategory === category.name
+                        ? "bg-red-100 text-red-700"
                         : "bg-gray-100 text-gray-400 group-hover:bg-white"
                     )}
                   >
@@ -360,9 +360,9 @@ export function StepProducts({ onNext }: StepProductsProps) {
           <div className="p-6 border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10 flex justify-between items-center">
             <h2 className="text-3xl font-bold text-gray-900">{selectedCategory}</h2>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto p-6">
-            <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
               {filteredProducts.map((product) => {
                 const inCart = items.find((i) => i.id === product.id)
                 return (
@@ -384,7 +384,7 @@ export function StepProducts({ onNext }: StepProductsProps) {
                         {product.name}
                       </div>
                     </div>
-                    
+
                     <div className="flex justify-between items-end mt-4">
                       <span className="text-2xl font-bold text-gray-900">€{product.price.toFixed(2)}</span>
                       {inCart ? (
@@ -469,8 +469,8 @@ export function StepProducts({ onNext }: StepProductsProps) {
               <span className="text-muted-foreground font-medium text-lg">Total</span>
               <span className="text-4xl font-black text-gray-900">€{total.toFixed(2)}</span>
             </div>
-            <Button 
-              className="w-full h-16 text-xl font-bold shadow-lg bg-red-600 hover:bg-red-700 hover:scale-[1.02] transition-all rounded-xl" 
+            <Button
+              className="w-full h-16 text-xl font-bold shadow-lg bg-red-600 hover:bg-red-700 hover:scale-[1.02] transition-all rounded-xl"
               disabled={items.length === 0}
               onClick={onNext}
             >

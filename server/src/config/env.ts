@@ -10,6 +10,10 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().default(100),
 
   SENTRY_DSN: z.string().optional(),
+
+  // Auth
+  JWT_SECRET: z.string().min(32),
+  BCRYPT_ROUNDS: z.coerce.number().default(12),
 });
 
 export const env = envSchema.parse(process.env);

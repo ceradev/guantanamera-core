@@ -1,4 +1,5 @@
 import { prisma } from "../src/prisma/client.js";
+import bcrypt from "bcrypt";
 
 const menuData = {
   menuCategories: {
@@ -73,6 +74,14 @@ const menuData = {
   ],
 };
 
+// Default admin user for initial setup
+const defaultAdmin = {
+  email: "[EMAIL_ADDRESS]",
+  password: "[PASSWORD]",
+  name: "Administrador",
+  role: "ADMIN" as const,
+};
+
 function parsePrice(priceStr: string): number {
   if (!priceStr) return 0;
   // Extract numeric part from string like "8.50€" or "20.00€ / 1Kg"
@@ -85,6 +94,21 @@ function parsePrice(priceStr: string): number {
 
 async function main() {
   console.log("🌱 Starting seed...");
+
+  // 0. Create default admin user
+  console.log("Creating default admin user...");
+  const hashedPassword = await bcrypt.hash(defaultAdmin.password, 12);
+  await prisma.user.upsert({
+    where: { email: defaultAdmin.email },
+    update: {},
+    create: {
+      email: defaultAdmin.email,
+      password: hashedPassword,
+      name: defaultAdmin.name,
+      role: defaultAdmin.role,
+    },
+  });
+  console.log(`  ✓ Admin user created: ${defaultAdmin.email}`);
 
   // 1. Process Menu Categories
   for (const [key, categoryData] of Object.entries(menuData.menuCategories)) {
@@ -221,8 +245,8 @@ async function main() {
     { key: "store_name", value: "Guantanamera", type: "string" },
     { key: "store_address", value: "C. Castro, 7, 38611 San Isidro, Santa Cruz de Tenerife", type: "string" },
     { key: "store_phone", value: "+34 922 17 30 39", type: "string" },
-    { 
-      key: "weekly_schedule", 
+    {
+      key: "weekly_schedule",
       value: JSON.stringify([
         { day: 1, name: "Lunes", open: "09:00", close: "18:00", enabled: true },
         { day: 2, name: "Martes", open: "09:00", close: "17:00", enabled: false },
@@ -231,8 +255,8 @@ async function main() {
         { day: 5, name: "Viernes", open: "09:00", close: "18:00", enabled: true },
         { day: 6, name: "Sábado", open: "09:00", close: "17:00", enabled: true },
         { day: 0, name: "Domingo", open: "09:00", close: "17:00", enabled: true },
-      ]), 
-      type: "json" 
+      ]),
+      type: "json"
     },
   ];
 

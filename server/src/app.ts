@@ -1,5 +1,6 @@
 // src/app.js
 import express from "express"
+import cookieParser from "cookie-parser"
 import Sentry from "./config/sentry.js"
 import productRoutes from "./routes/product.routes.js"
 import orderRoutes from "./routes/order.routes.js"
@@ -9,6 +10,7 @@ import salesRoutes from "./routes/sales.routes.js"
 import notificationRoutes from "./routes/notification.routes.js"
 import settingRoutes from "./routes/setting.routes.js"
 import invoiceRoutes from "./routes/invoice.routes.js"
+import authRoutes from "./routes/auth.routes.js"
 import swaggerUi from "swagger-ui-express"
 import { swaggerSpec } from "./config/swagger.js"
 import { corsMiddleware } from "./config/cors.js";
@@ -28,6 +30,7 @@ app.use(helmet())
 app.use(requestLogger)
 
 app.use(express.json())
+app.use(cookieParser())
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
@@ -39,6 +42,7 @@ app.use(salesRoutes)
 app.use(notificationRoutes)
 app.use(settingRoutes)
 app.use(invoiceRoutes)
+app.use(authRoutes)
 
 // Sentry Error Handler must be before any other error middleware
 app.use(Sentry.expressErrorHandler({

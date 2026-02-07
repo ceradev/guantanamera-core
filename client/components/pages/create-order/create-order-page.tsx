@@ -36,10 +36,10 @@ function CreateOrderWizard(props: CreateOrderPageProps) {
       }
       const currentDay = dayMap[weekdayName]
       const todaySchedule = weeklySchedule?.find((s: any) => s.day === currentDay)
-      
+
       let title = "Establecimiento Cerrado"
       let message = ""
-      
+
       if (!ordersEnabled) {
         title = "Pedidos Desactivados"
         message = "La recepción de pedidos está desactivada actualmente por el administrador."
@@ -96,7 +96,7 @@ function CreateOrderWizard(props: CreateOrderPageProps) {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">Nuevo Pedido</h1>
           <p className="text-muted-foreground mt-1 text-base md:text-lg truncate">Sigue los pasos para crear una orden</p>
         </div>
-        
+
         {/* Step Indicator */}
         <div className="flex items-center gap-2 lg:gap-4 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0 scrollbar-hide">
           {[
@@ -105,7 +105,7 @@ function CreateOrderWizard(props: CreateOrderPageProps) {
             { id: "customer", label: "Cliente", short: "3" }
           ].map((s, idx) => {
             const isActive = step === s.id
-            const isCompleted = 
+            const isCompleted =
               (step === "time" && s.id === "products") ||
               (step === "customer" && (s.id === "products" || s.id === "time"))
 
@@ -113,7 +113,7 @@ function CreateOrderWizard(props: CreateOrderPageProps) {
               <div key={s.id} className="flex items-center gap-2 lg:gap-4 shrink-0">
                 <div className={`
                   flex items-center gap-2 px-4 lg:px-6 py-2.5 lg:py-3 rounded-full text-sm lg:text-base font-bold transition-all
-                  ${isActive ? "bg-red-600 text-white shadow-md" : 
+                  ${isActive ? "bg-red-600 text-white shadow-md" :
                     isCompleted ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}
                 `}>
                   {isCompleted ? <Check className="w-4 h-4" /> : <span className="lg:hidden">{s.short}.</span>}

@@ -17,6 +17,7 @@ export async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, i
   try {
     const response = await fetch(url, {
       ...options,
+      credentials: 'include',
       headers: {
         ...headers,
         ...options.headers,
