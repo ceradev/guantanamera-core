@@ -1,4 +1,5 @@
 import { prisma } from "../src/prisma/client.js";
+import { env } from "../src/config/env.js";
 import bcrypt from "bcrypt";
 
 const menuData = {
@@ -76,8 +77,8 @@ const menuData = {
 
 // Default admin user for initial setup
 const defaultAdmin = {
-  email: "[EMAIL_ADDRESS]",
-  password: "[PASSWORD]",
+  email: env.ADMIN_EMAIL,
+  password: env.ADMIN_PASSWORD,
   name: "Administrador",
   role: "ADMIN" as const,
 };

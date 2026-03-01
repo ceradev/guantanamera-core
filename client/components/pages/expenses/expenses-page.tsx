@@ -17,10 +17,10 @@ import {
 } from "lucide-react"
 import { es } from "date-fns/locale"
 import { format, startOfMonth, endOfMonth } from "date-fns"
-import { getInvoices, deleteInvoice as deleteInvoiceApi } from "@/services"
-import type { Invoice, ExpenseCategory, InvoicesResponse } from "@/types"
-import { EXPENSE_CATEGORY_LABELS } from "@/types"
+import { getInvoices, getSuppliers, deleteInvoice as deleteInvoiceApi } from "@/services"
+import type { Invoice, InvoicesResponse } from "@/types"
 import { AddInvoiceModal } from "./components/add-invoice-modal"
+import { Search } from "lucide-react"
 
 export default function ExpensesPage() {
     // Client-side hydration state
@@ -33,8 +33,9 @@ export default function ExpensesPage() {
     const [tempToDate, setTempToDate] = useState("")
     const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false)
 
-    // Category filter state
-    const [category, setCategory] = useState<ExpenseCategory | "">("")
+    // Filter state
+    const [supplier, setSupplier] = useState<string>("")
+    const [suppliers, setSuppliers] = useState<string[]>([])
 
     // Modal state
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -54,6 +55,16 @@ export default function ExpensesPage() {
         setIsClient(true)
     }, [])
 
+    // Fetch suppliers
+    const fetchSuppliers = useCallback(async () => {
+        try {
+            const result = await getSuppliers()
+            setSuppliers(result)
+        } catch (e) {
+            console.error("Error fetching suppliers:", e)
+        }
+    }, [])
+
     // Fetch invoices
     const fetchData = useCallback(async () => {
         if (!fromDate || !toDate) return // Wait for dates to be initialized
@@ -64,7 +75,7 @@ export default function ExpensesPage() {
             const response = await getInvoices({
                 from: fromDate,
                 to: toDate,
-                category: category || undefined,
+                supplier: supplier || undefined,
             })
             setData(response)
         } catch (e) {
@@ -72,24 +83,26 @@ export default function ExpensesPage() {
         } finally {
             setIsLoading(false)
         }
-    }, [fromDate, toDate, category])
+    }, [fromDate, toDate, supplier])
 
     useEffect(() => {
         if (isClient) {
             fetchData()
+            fetchSuppliers()
         }
-    }, [fetchData, isClient])
+    }, [fetchData, fetchSuppliers, isClient])
 
     const handleDeleteInvoice = useCallback(async (id: string) => {
         if (confirm("¿Estás seguro de eliminar esta factura?")) {
             try {
                 await deleteInvoiceApi(id)
                 fetchData()
+                fetchSuppliers()
             } catch (e) {
                 console.error("Error deleting invoice:", e)
             }
         }
-    }, [fetchData])
+    }, [fetchData, fetchSuppliers])
 
     // Date popover handlers
     const handlePopoverOpen = (open: boolean) => {
@@ -112,26 +125,13 @@ export default function ExpensesPage() {
     const handleModalSuccess = () => {
         setIsAddModalOpen(false)
         fetchData()
+        fetchSuppliers()
     }
 
     // Period label - only calculate when dates are available
     const periodLabel = fromDate && toDate
         ? `${format(new Date(fromDate), "d MMM", { locale: es })} - ${format(new Date(toDate), "d MMM yyyy", { locale: es })}`
         : "Cargando..."
-
-    // Format category badge color
-    const getCategoryColor = (cat: ExpenseCategory) => {
-        const colors: Record<ExpenseCategory, string> = {
-            FOOD: "bg-orange-100 text-orange-700",
-            DRINKS: "bg-blue-100 text-blue-700",
-            SUPPLIES: "bg-purple-100 text-purple-700",
-            RENT: "bg-gray-100 text-gray-700",
-            UTILITIES: "bg-yellow-100 text-yellow-700",
-            MAINTENANCE: "bg-green-100 text-green-700",
-            OTHER: "bg-gray-100 text-gray-600",
-        }
-        return colors[cat] || "bg-gray-100 text-gray-600"
-    }
 
     return (
         <div className="relative h-full min-h-0 flex flex-col bg-white">
@@ -178,23 +178,21 @@ export default function ExpensesPage() {
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-4">
-                                    {/* Category filter */}
-                                    <div className="flex items-center gap-1 bg-gray-50 border rounded-xl p-1 w-fit overflow-x-auto">
-                                        <button
-                                            className={`px-3 md:px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${!category ? "bg-white border shadow-sm font-bold text-gray-900" : "text-gray-500 hover:text-gray-700 font-medium"}`}
-                                            onClick={() => setCategory("")}
+                                    {/* Supplier filter */}
+                                    <div className="flex items-center gap-2 bg-gray-50 border-2 border-gray-100 rounded-xl px-3 py-1.5 min-w-[200px]">
+                                        <Search className="w-4 h-4 text-gray-400" />
+                                        <select
+                                            value={supplier}
+                                            onChange={(e) => setSupplier(e.target.value)}
+                                            className="bg-transparent border-none text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer w-full"
                                         >
-                                            Todos
-                                        </button>
-                                        {(["FOOD", "DRINKS", "SUPPLIES", "RENT", "UTILITIES", "MAINTENANCE", "OTHER"] as ExpenseCategory[]).map((cat) => (
-                                            <button
-                                                key={cat}
-                                                className={`px-3 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${category === cat ? "bg-white border shadow-sm font-bold text-gray-900" : "text-gray-500 hover:text-gray-700 font-medium"}`}
-                                                onClick={() => setCategory(cat)}
-                                            >
-                                                {EXPENSE_CATEGORY_LABELS[cat]}
-                                            </button>
-                                        ))}
+                                            <option value="">Todos los Proveedores</option>
+                                            {suppliers.map((s) => (
+                                                <option key={s} value={s}>
+                                                    {s}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -310,7 +308,6 @@ export default function ExpensesPage() {
                                                 <tr>
                                                     <th className="px-6 py-3 font-bold">Fecha</th>
                                                     <th className="px-6 py-3 font-bold">Proveedor</th>
-                                                    <th className="px-6 py-3 font-bold">Categoría</th>
                                                     <th className="px-6 py-3 font-bold">Referencia</th>
                                                     <th className="px-6 py-3 font-bold text-right">Total</th>
                                                     <th className="px-6 py-3 font-bold text-center">Acciones</th>
@@ -324,11 +321,6 @@ export default function ExpensesPage() {
                                                         </td>
                                                         <td className="px-4 py-3 md:px-6 md:py-4 font-medium text-gray-900">
                                                             {invoice.supplier}
-                                                        </td>
-                                                        <td className="px-4 py-3 md:px-6 md:py-4">
-                                                            <Badge className={`${getCategoryColor(invoice.category)} font-bold text-xs`}>
-                                                                {EXPENSE_CATEGORY_LABELS[invoice.category]}
-                                                            </Badge>
                                                         </td>
                                                         <td className="px-4 py-3 md:px-6 md:py-4 text-gray-500">
                                                             {invoice.reference || "—"}

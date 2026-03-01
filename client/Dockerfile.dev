@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copiar archivos de dependencias
+COPY package.json pnpm-lock.yaml ./
+
+# Instalar dependencias (incluyendo devDependencies)
+RUN pnpm install
+
+# Copiar el código fuente
+COPY . .
+
+# Puerto de Next.js
+EXPOSE 3000
+
+# Arrancar el servidor de desarrollo
+# Nota: Si usas Windows/WSL, a veces es necesario --turbo para mejor rendimiento
+CMD ["pnpm", "dev"]

@@ -7,6 +7,7 @@ import {
     findUserById,
 } from "../services/auth.service.js";
 import { COOKIE_CONFIG } from "../config/cookie.config.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * Authentication middleware with sliding session renewal
@@ -34,6 +35,7 @@ export async function requireAuth(
         const payload = verifyToken(token);
 
         if (!payload) {
+            logger.warn(`Intento de acceso con token inválido o expirado.`);
             // Clear invalid cookie
             res.clearCookie(COOKIE_CONFIG.NAME, COOKIE_CONFIG.OPTIONS);
             res.status(401).json({ error: "Sesión expirada. Inicia sesión de nuevo." });
@@ -44,6 +46,7 @@ export async function requireAuth(
         const user = await findUserById(payload.userId);
 
         if (!user) {
+            logger.warn(`Intento de acceso con usuario inexistente o inactivo: ${payload.email}`);
             res.clearCookie(COOKIE_CONFIG.NAME, COOKIE_CONFIG.OPTIONS);
             res.status(401).json({ error: "Usuario no válido." });
             return;
@@ -57,6 +60,7 @@ export async function requireAuth(
                 ...COOKIE_CONFIG.OPTIONS,
                 maxAge: COOKIE_CONFIG.MAX_AGE_MS,
             });
+            logger.debug(`Token renovado para el usuario ${user.email} (sliding session).`);
         }
 
         // Attach user to request
@@ -64,7 +68,7 @@ export async function requireAuth(
 
         next();
     } catch (error) {
-        console.error("Auth middleware error:", error);
+        logger.error(`Error en el middleware de autenticación: ${error instanceof Error ? error.message : String(error)}`);
         res.status(500).json({ error: "Error de autenticación." });
     }
 }

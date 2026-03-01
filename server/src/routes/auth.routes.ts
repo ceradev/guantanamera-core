@@ -58,6 +58,6 @@ router.post("/api/auth/logout", logout);
  *       401:
  *         description: Not authenticated
  */
-router.get("/api/auth/me", requireAuth as any, me);
+router.get("/api/auth/me", requireAuth, me);
 
 export default router;

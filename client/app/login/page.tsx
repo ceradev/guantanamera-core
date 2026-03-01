@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -19,7 +19,7 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const redirect = searchParams.get('redirect') || '/'
@@ -51,6 +51,64 @@ export default function LoginPage() {
     }
 
     return (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {error && (
+                <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-lg">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{error}</span>
+                </div>
+            )}
+
+            <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                    id="email"
+                    type="email"
+                    placeholder="tu@email.com"
+                    autoComplete="email"
+                    disabled={isLoading}
+                    {...register('email')}
+                />
+                {errors.email && (
+                    <p className="text-sm text-red-500">{errors.email.message}</p>
+                )}
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    disabled={isLoading}
+                    {...register('password')}
+                />
+                {errors.password && (
+                    <p className="text-sm text-red-500">{errors.password.message}</p>
+                )}
+            </div>
+
+            <Button
+                type="submit"
+                className="w-full bg-red-600 hover:bg-red-700"
+                disabled={isLoading}
+            >
+                {isLoading ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Iniciando sesión...
+                    </>
+                ) : (
+                    'Entrar'
+                )}
+            </Button>
+        </form>
+    )
+}
+
+export default function LoginPage() {
+    return (
         <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-red-50 to-orange-50 dark:from-neutral-950 dark:to-neutral-900 p-4">
             <Card className="w-full max-w-md shadow-xl">
                 <CardHeader className="space-y-1 text-center">
@@ -67,59 +125,9 @@ export default function LoginPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                        {error && (
-                            <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-lg">
-                                <AlertCircle className="w-4 h-4 shrink-0" />
-                                <span>{error}</span>
-                            </div>
-                        )}
-
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="tu@email.com"
-                                autoComplete="email"
-                                disabled={isLoading}
-                                {...register('email')}
-                            />
-                            {errors.email && (
-                                <p className="text-sm text-red-500">{errors.email.message}</p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Contraseña</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                placeholder="••••••••"
-                                autoComplete="current-password"
-                                disabled={isLoading}
-                                {...register('password')}
-                            />
-                            {errors.password && (
-                                <p className="text-sm text-red-500">{errors.password.message}</p>
-                            )}
-                        </div>
-
-                        <Button
-                            type="submit"
-                            className="w-full bg-red-600 hover:bg-red-700"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Iniciando sesión...
-                                </>
-                            ) : (
-                                'Iniciar sesión'
-                            )}
-                        </Button>
-                    </form>
+                    <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div>}>
+                        <LoginForm />
+                    </Suspense>
                 </CardContent>
             </Card>
         </div>

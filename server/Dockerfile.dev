@@ -2,14 +2,26 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Instalar dependencias del sistema para módulos nativos
+RUN apk add --no-cache python3 make g++
 
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install
+# Instalar pnpm (si se prefiere, aunque el server usa npm según su Dockerfile actual)
+RUN npm install -g pnpm
 
+# Copiar archivos de dependencias
+COPY package.json pnpm-lock.yaml* ./
+
+# Instalar dependencias
+RUN npm install
+
+# Copiar el código fuente
 COPY . .
 
+# Generar Prisma Client
+RUN npx prisma generate
+
+# Puerto de la API
 EXPOSE 8000
 
-# 👇 hot reload con tsx
-CMD ["pnpm", "dev"]
+# Arrancar en modo desarrollo con hot-reload
+CMD ["npm", "run", "dev"]

@@ -4,23 +4,25 @@ FROM node:20-alpine
 # Directorio de trabajo
 WORKDIR /app
 
-# Habilitar pnpm (Node 20 trae corepack)
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Instalar dependencias del sistema necesarias para bcrypt y otros módulos nativos
+RUN apk add --no-cache python3 make g++
 
 # Copiar manifests
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml* ./
 
-# Instalar dependencias
-RUN pnpm install --frozen-lockfile
+# Instalar dependencias usando npm (más fiable en Docker para módulos nativos)
+# Primero convertimos pnpm-lock.yaml a package-lock.json si es posible, 
+# pero simplemente usar npm install suele funcionar bien si package.json está correcto.
+RUN npm install
 
 # Copiar el resto del código
 COPY . .
 
 # Generar Prisma Client
-RUN pnpm prisma generate
+RUN npx prisma generate
 
 # Compilar TypeScript
-RUN pnpm build
+RUN npm run build
 
 # Puerto de la API
 EXPOSE 8000

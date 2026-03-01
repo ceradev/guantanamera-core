@@ -107,25 +107,14 @@ enum SaleSource {
   MANUAL
 }
 
-enum ExpenseCategory {
-  FOOD
-  DRINKS
-  SUPPLIES
-  RENT
-  UTILITIES
-  MAINTENANCE
-  OTHER
-}
-
 model Invoice {
-  id          String          @id @default(uuid())
+  id          String   @id @default(uuid())
   date        DateTime
   supplier    String
   reference   String?
   totalAmount Float
-  category    ExpenseCategory
   notes       String?
-  createdAt   DateTime        @default(now())
+  createdAt   DateTime @default(now())
 
   items InvoiceItem[]
 }

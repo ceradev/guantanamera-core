@@ -12,8 +12,13 @@ const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
 
   // Auth
+  ADMIN_API_KEY: z.string().min(1),
   JWT_SECRET: z.string().min(32),
   BCRYPT_ROUNDS: z.coerce.number().default(12),
+
+  // Seed
+  ADMIN_EMAIL: z.string().email().default("admin@guantanamera.com"),
+  ADMIN_PASSWORD: z.string().min(8).default("default-password"),
 });
 
 export const env = envSchema.parse(process.env);

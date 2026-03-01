@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { logger } from "../utils/logger.js";
 import { Prisma } from "@prisma/client";
+import { env } from "../config/env.js";
 
 export const errorHandler = (
   err: Error,
@@ -34,6 +35,6 @@ export const errorHandler = (
 
   res.status(status).json({
     error: status === 500 ? "Internal Server Error" : "Error",
-    message: process.env.NODE_ENV === "development" || status < 500 ? err.message : undefined,
+    message: env.NODE_ENV === "development" || status < 500 ? err.message : undefined,
   });
 };

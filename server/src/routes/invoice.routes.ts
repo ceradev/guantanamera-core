@@ -36,16 +36,10 @@ const router = Router();
  *               date:
  *                 type: string
  *                 format: date
- *                 example: "2025-01-15"
  *               supplier:
  *                 type: string
- *                 example: "Proveedor ABC"
  *               reference:
  *                 type: string
- *                 example: "FAC-2025-001"
- *               category:
- *                 type: string
- *                 enum: [FOOD, DRINKS, SUPPLIES, RENT, UTILITIES, MAINTENANCE, OTHER]
  *               notes:
  *                 type: string
  *               items:
@@ -91,11 +85,10 @@ router.post("/invoices", apiKeyMiddleware, validate(createInvoiceSchema), invoic
  *           format: date
  *         description: Fecha fin del rango
  *       - in: query
- *         name: category
+ *         name: supplier
  *         schema:
  *           type: string
- *           enum: [FOOD, DRINKS, SUPPLIES, RENT, UTILITIES, MAINTENANCE, OTHER]
- *         description: Filtrar por categoría
+ *         description: Filtrar por proveedor
  *     responses:
  *       200:
  *         description: Lista de facturas con total
@@ -103,6 +96,22 @@ router.post("/invoices", apiKeyMiddleware, validate(createInvoiceSchema), invoic
  *         description: No autorizado
  */
 router.get("/invoices", apiKeyMiddleware, validate(invoiceQuerySchema), invoiceController.getInvoices);
+
+/**
+ * @swagger
+ * /invoices/suppliers:
+ *   get:
+ *     summary: Obtener lista de proveedores únicos
+ *     tags: [Invoices]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de proveedores
+ *       401:
+ *         description: No autorizado
+ */
+router.get("/invoices/suppliers", apiKeyMiddleware, invoiceController.getSuppliers);
 
 /**
  * @swagger

@@ -1,13 +1,9 @@
 import { prisma } from "../prisma/client.js";
-import { ExpenseCategory } from "@prisma/client";
-
-export { ExpenseCategory };
 
 export interface CreateInvoiceInput {
   date: Date;
   supplier: string;
   reference?: string;
-  category: ExpenseCategory;
   notes?: string;
   items: {
     description: string;
@@ -19,7 +15,7 @@ export interface CreateInvoiceInput {
 export interface InvoiceFilters {
   from?: string;
   to?: string;
-  category?: ExpenseCategory;
+  supplier?: string;
 }
 
 /**
@@ -34,12 +30,11 @@ export async function createInvoice(data: CreateInvoiceInput) {
 
   const totalAmount = itemsWithTotal.reduce((sum, item) => sum + item.totalPrice, 0);
 
-  return prisma.invoice.create({
+  return (prisma.invoice as any).create({
     data: {
       date: data.date,
       supplier: data.supplier,
       reference: data.reference,
-      category: data.category,
       notes: data.notes,
       totalAmount,
       items: {
@@ -71,11 +66,14 @@ export async function getInvoices(filters: InvoiceFilters) {
     }
   }
 
-  if (filters.category) {
-    where.category = filters.category;
+  if (filters.supplier) {
+    where.supplier = {
+      contains: filters.supplier,
+      mode: "insensitive",
+    };
   }
 
-  const invoices = await prisma.invoice.findMany({
+  const invoices = await (prisma.invoice as any).findMany({
     where,
     include: {
       items: true,
@@ -96,10 +94,27 @@ export async function getInvoices(filters: InvoiceFilters) {
 }
 
 /**
+ * Get all unique suppliers
+ */
+export async function getSuppliers() {
+  const result = await (prisma.invoice as any).findMany({
+    distinct: ["supplier"],
+    select: {
+      supplier: true,
+    },
+    orderBy: {
+      supplier: "asc",
+    },
+  });
+
+  return result.map((r: any) => r.supplier);
+}
+
+/**
  * Get invoice by ID
  */
 export async function getInvoiceById(id: string) {
-  return prisma.invoice.findUnique({
+  return (prisma.invoice as any).findUnique({
     where: { id },
     include: {
       items: true,
@@ -111,7 +126,7 @@ export async function getInvoiceById(id: string) {
  * Delete invoice by ID
  */
 export async function deleteInvoice(id: string) {
-  return prisma.invoice.delete({
+  return (prisma.invoice as any).delete({
     where: { id },
   });
 }

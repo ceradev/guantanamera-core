@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import * as invoiceService from "../services/invoice.service.js";
-import { ExpenseCategory } from "../services/invoice.service.js";
 import { logger } from "../utils/logger.js";
 
 export const createInvoice = async (req: Request, res: Response) => {
@@ -16,18 +15,28 @@ export const createInvoice = async (req: Request, res: Response) => {
 
 export const getInvoices = async (req: Request, res: Response) => {
   try {
-    const { from, to, category } = (req as any).validated?.query ?? req.query;
+    const { from, to, supplier } = (req as any).validated?.query ?? req.query;
     
     const filters = {
       from: from as string,
       to: to as string,
-      category: category as ExpenseCategory,
+      supplier: supplier as string,
     };
 
     const result = await invoiceService.getInvoices(filters);
     res.json(result);
   } catch (error: any) {
     logger.error(`Error fetching invoices: ${error.message}`);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export const getSuppliers = async (req: Request, res: Response) => {
+  try {
+    const suppliers = await invoiceService.getSuppliers();
+    res.json(suppliers);
+  } catch (error: any) {
+    logger.error(`Error fetching suppliers: ${error.message}`);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };

@@ -72,7 +72,7 @@ export const getSales = async (req: Request, res: Response) => {
 export const getSaleById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const sale = await salesService.getSaleById(id);
+    const sale = await salesService.getSaleById(id as string);
     
     if (!sale) {
       return res.status(404).json({ error: "Sale not found" });

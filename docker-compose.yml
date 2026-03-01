@@ -3,9 +3,9 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_DB: app_db
-      POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: example_password
+      POSTGRES_DB: ${POSTGRES_DB:-guantanamera_core}
+      POSTGRES_USER: ${POSTGRES_USER:-your_db_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_db_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -17,11 +17,14 @@ services:
       - postgres
     environment:
       NODE_ENV: production
-      PORT: 8000
-      DATABASE_URL: postgresql://app_user:example_password@postgres:5432/app_db
+      PORT: ${PORT:-8000}
+      DATABASE_URL: ${DATABASE_URL}
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      SENTRY_DSN: ${SENTRY_DSN}
     command: >
       sh -c "
-        pnpm run start
+        npm run start
       "
 
   dashboard:
@@ -33,7 +36,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      NEXT_PUBLIC_API_URL: https://api.example.com
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_ADMIN_API_KEY: ${NEXT_PUBLIC_ADMIN_API_KEY}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
 
 volumes:
   postgres_data:

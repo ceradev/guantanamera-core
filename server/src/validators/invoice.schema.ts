@@ -11,7 +11,6 @@ export const createInvoiceSchema = z.object({
     date: z.string().transform((val) => new Date(val)),
     supplier: z.string().min(1, "El proveedor es requerido"),
     reference: z.string().optional(),
-    category: z.enum(["FOOD", "DRINKS", "SUPPLIES", "RENT", "UTILITIES", "MAINTENANCE", "OTHER"]),
     notes: z.string().optional(),
     items: z.array(invoiceItemSchema).min(1, "Se requiere al menos un item"),
   }),
@@ -21,7 +20,7 @@ export const invoiceQuerySchema = z.object({
   query: z.object({
     from: z.string().optional(),
     to: z.string().optional(),
-    category: z.enum(["FOOD", "DRINKS", "SUPPLIES", "RENT", "UTILITIES", "MAINTENANCE", "OTHER"]).optional(),
+    supplier: z.string().optional(),
   }),
 })
 

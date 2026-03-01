@@ -1,6 +1,12 @@
+import 'dotenv/config';
 
 const API_URL = 'http://localhost:8000';
-const API_KEY = process.env.ADMIN_API_KEY || 'your-admin-api-key';
+const API_KEY = process.env.ADMIN_API_KEY;
+
+if (!API_KEY) {
+  console.error('❌ ADMIN_API_KEY is not defined in environment variables.');
+  process.exit(1);
+}
 
 async function main() {
   console.log('--- Starting Verification (API Only) ---');

@@ -3,7 +3,7 @@ import { env } from "./env.js";
 
 // Initialize Sentry
 Sentry.init({
-  dsn: process.env.SENTRY_DSN,
+  dsn: env.SENTRY_DSN,
   environment: env.NODE_ENV,
   tracesSampleRate: 0, // Disable performance tracing as requested
   sendDefaultPii: false, // Ensure no PII is sent by default

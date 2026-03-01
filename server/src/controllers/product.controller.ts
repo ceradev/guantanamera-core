@@ -28,7 +28,11 @@ export const getAdminMenu = async (_req: Request, res: Response) => {
 export const createProduct = async (req: Request, res: Response) => {
   try {
     const { name, price, categoryId } = req.validated?.body ?? req.body;
-    const product = await productService.createProduct({ name, price: parseFloat(price), categoryId: parseInt(categoryId) });
+    const product = await productService.createProduct({ 
+      name: name as string, 
+      price: parseFloat(price as string), 
+      categoryId: parseInt(categoryId as string) 
+    });
     res.status(201).json(mapProductToDTO(product));
   } catch (error) {
     console.error("Error creating product:", error);
@@ -40,11 +44,11 @@ export const updateProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.validated?.params ?? req.params;
     const { price, active, name, categoryId } = req.validated?.body ?? req.body;
-    const product = await productService.updateProduct(parseInt(id), { 
-      price: price !== undefined ? parseFloat(price) : undefined, 
-      active,
-      name,
-      categoryId: categoryId !== undefined ? parseInt(categoryId) : undefined
+    const product = await productService.updateProduct(parseInt(id as string), { 
+      price: price !== undefined ? parseFloat(price as string) : undefined, 
+      active: active as boolean | undefined,
+      name: name as string | undefined,
+      categoryId: categoryId !== undefined ? parseInt(categoryId as string) : undefined
     });
     res.json(mapProductToDTO(product));
   } catch (error) {
@@ -56,7 +60,7 @@ export const updateProduct = async (req: Request, res: Response) => {
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await productService.deleteProduct(parseInt(id));
+    await productService.deleteProduct(parseInt(id as string));
     res.status(204).send();
   } catch (error) {
     console.error("Error deleting product:", error);
@@ -68,7 +72,7 @@ export const updateProductActive = async (req: Request, res: Response) => {
   try {
     const { id } = req.validated?.params ?? req.params;
     const { active } = req.validated?.body ?? req.body;
-    const product = await productService.updateProduct(parseInt(id), { active });
+    const product = await productService.updateProduct(parseInt(id as string), { active: active as boolean });
     res.json(mapProductToDTO(product));
   } catch (error) {
     console.error("Error updating product active:", error);

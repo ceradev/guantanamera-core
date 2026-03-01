@@ -2,14 +2,13 @@ import { fetchAPI } from '@/lib/api'
 import type { 
   Invoice, 
   InvoicesResponse, 
-  CreateInvoiceInput, 
-  ExpenseCategory 
+  CreateInvoiceInput
 } from '@/types'
 
 export interface InvoiceFilters {
   from?: string
   to?: string
-  category?: ExpenseCategory
+  supplier?: string
 }
 
 /**
@@ -19,12 +18,19 @@ export async function getInvoices(filters: InvoiceFilters = {}): Promise<Invoice
   const params = new URLSearchParams()
   if (filters.from) params.append('from', filters.from)
   if (filters.to) params.append('to', filters.to)
-  if (filters.category) params.append('category', filters.category)
+  if (filters.supplier) params.append('supplier', filters.supplier)
   
   const queryString = params.toString()
   const endpoint = queryString ? `/invoices?${queryString}` : '/invoices'
   
   return fetchAPI<InvoicesResponse>(endpoint, {}, true)
+}
+
+/**
+ * Get all unique suppliers
+ */
+export async function getSuppliers(): Promise<string[]> {
+  return fetchAPI<string[]>('/invoices/suppliers', {}, true)
 }
 
 /**

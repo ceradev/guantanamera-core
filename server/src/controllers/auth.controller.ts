@@ -4,10 +4,11 @@ import {
     verifyPassword,
     generateToken,
     toUserResponse,
+    findUserById,
 } from "../services/auth.service.js";
 import { COOKIE_CONFIG } from "../config/cookie.config.js";
 import { AuthenticatedRequest } from "../types/auth.types.js";
-import { findUserById } from "../services/auth.service.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * Login controller
@@ -19,6 +20,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
         // Validate input
         if (!email || !password) {
+            logger.warn(`Intento de login fallido: Email o contraseña no proporcionados.`);
             res.status(400).json({ error: "Email y contraseña son requeridos." });
             return;
         }
@@ -27,6 +29,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         const user = await findUserByEmail(email);
 
         if (!user) {
+            logger.warn(`Intento de login fallido: Usuario no encontrado (${email}).`);
             res.status(401).json({ error: "Credenciales inválidas." });
             return;
         }
@@ -35,6 +38,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         const isValid = await verifyPassword(password, user.password);
 
         if (!isValid) {
+            logger.warn(`Intento de login fallido: Contraseña incorrecta para el usuario ${email}.`);
             res.status(401).json({ error: "Credenciales inválidas." });
             return;
         }
@@ -48,13 +52,15 @@ export async function login(req: Request, res: Response): Promise<void> {
             maxAge: COOKIE_CONFIG.MAX_AGE_MS,
         });
 
+        logger.info(`Login exitoso: Usuario ${email} ha iniciado sesión.`);
+
         // Return user info (without password)
         res.json({
             message: "Login exitoso.",
             user: toUserResponse(user),
         });
     } catch (error) {
-        console.error("Login error:", error);
+        logger.error(`Error en el controlador de login: ${error instanceof Error ? error.message : String(error)}`);
         res.status(500).json({ error: "Error en el servidor." });
     }
 }
@@ -70,7 +76,7 @@ export async function logout(_req: Request, res: Response): Promise<void> {
 
         res.json({ message: "Sesión cerrada correctamente." });
     } catch (error) {
-        console.error("Logout error:", error);
+        logger.error(`Error al cerrar sesión: ${error instanceof Error ? error.message : String(error)}`);
         res.status(500).json({ error: "Error al cerrar sesión." });
     }
 }
@@ -81,6 +87,11 @@ export async function logout(_req: Request, res: Response): Promise<void> {
  */
 export async function me(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
+        if (!req.user) {
+            res.status(401).json({ error: "No autorizado. Inicia sesión." });
+            return;
+        }
+
         const user = await findUserById(req.user.userId);
 
         if (!user) {
@@ -90,7 +101,7 @@ export async function me(req: AuthenticatedRequest, res: Response): Promise<void
 
         res.json({ user: toUserResponse(user) });
     } catch (error) {
-        console.error("Me error:", error);
+        logger.error(`Error en el controlador /me: ${error instanceof Error ? error.message : String(error)}`);
         res.status(500).json({ error: "Error en el servidor." });
     }
 }

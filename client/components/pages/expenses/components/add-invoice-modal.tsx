@@ -11,10 +11,9 @@ import {
 import { Button } from "@/components/ui/buttons/button"
 import { Input } from "@/components/ui/inputs/input"
 import { Plus, Trash2, Euro, Loader2 } from "lucide-react"
-import { createInvoice } from "@/services"
+import { createInvoice, getSuppliers } from "@/services"
 import { format } from "date-fns"
-import type { ExpenseCategory, CreateInvoiceInput } from "@/types"
-import { EXPENSE_CATEGORY_LABELS } from "@/types"
+import type { CreateInvoiceInput } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 
 interface InvoiceItemInput {
@@ -34,19 +33,32 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
     const [loading, setLoading] = useState(false)
     const [date, setDate] = useState("")
     const [supplier, setSupplier] = useState("")
+    const [suppliers, setSuppliers] = useState<string[]>([])
     const [reference, setReference] = useState("")
-    const [category, setCategory] = useState<ExpenseCategory>("FOOD")
     const [notes, setNotes] = useState("")
     const [items, setItems] = useState<InvoiceItemInput[]>([
         { description: "", quantity: 1, unitPrice: 0 },
     ])
 
-    // Initialize date on client to avoid hydration mismatch
+    // Initialize date and fetch suppliers on client
     useEffect(() => {
         if (!date) {
             setDate(format(new Date(), "yyyy-MM-dd"))
         }
-    }, [date])
+        
+        const fetchSuppliersList = async () => {
+            try {
+                const list = await getSuppliers()
+                setSuppliers(list)
+            } catch (e) {
+                console.error("Error fetching suppliers:", e)
+            }
+        }
+        
+        if (open) {
+            fetchSuppliersList()
+        }
+    }, [date, open])
 
     // Calculate totals
     const calculateItemTotal = (item: InvoiceItemInput) => item.quantity * item.unitPrice
@@ -76,7 +88,6 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
         setDate(format(new Date(), "yyyy-MM-dd"))
         setSupplier("")
         setReference("")
-        setCategory("FOOD")
         setNotes("")
         setItems([{ description: "", quantity: 1, unitPrice: 0 }])
     }, [])
@@ -99,7 +110,6 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
             date,
             supplier: supplier.trim(),
             reference: reference.trim() || undefined,
-            category,
             notes: notes.trim() || undefined,
             items: validItems,
         }
@@ -116,7 +126,7 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
         } finally {
             setLoading(false)
         }
-    }, [date, supplier, reference, category, notes, items, resetForm, onSuccess, toast])
+    }, [date, supplier, reference, notes, items, resetForm, onSuccess, toast])
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,27 +154,17 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
                             <Input
                                 id="supplier"
                                 type="text"
+                                list="suppliers-list"
                                 value={supplier}
                                 onChange={(e) => setSupplier(e.target.value)}
                                 placeholder="Nombre del proveedor"
                                 className="rounded-xl border-gray-200 focus:ring-red-500/20 focus:border-red-500 h-11"
                             />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <label htmlFor="category" className="text-sm font-bold text-gray-700">Categoría *</label>
-                            <select
-                                id="category"
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-                                className="w-full rounded-xl border-gray-200 text-sm focus:ring-red-500/20 focus:border-red-500 bg-white py-2 px-3 h-11"
-                            >
-                                {(Object.entries(EXPENSE_CATEGORY_LABELS) as [ExpenseCategory, string][]).map(([key, label]) => (
-                                    <option key={key} value={key}>
-                                        {label}
-                                    </option>
+                            <datalist id="suppliers-list">
+                                {suppliers.map((s) => (
+                                    <option key={s} value={s} />
                                 ))}
-                            </select>
+                            </datalist>
                         </div>
 
                         <div className="grid gap-2">
