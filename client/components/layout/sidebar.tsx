@@ -11,7 +11,9 @@ import {
   Menu,
   X,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Building2,
+  FileText
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import type { Page } from "@/app/page"
@@ -60,6 +62,18 @@ export default function Sidebar({
       icon: Wallet,
       label: "Gastos",
       description: "Control de costes"
+    },
+    {
+      id: "suppliers" as Page,
+      icon: Building2,
+      label: "Proveedores",
+      description: "Datos fiscales"
+    },
+    {
+      id: "reports" as Page,
+      icon: FileText,
+      label: "Reportes",
+      description: "Análisis ejecutivo"
     },
     {
       id: "menu-management" as Page,

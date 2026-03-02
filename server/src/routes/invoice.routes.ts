@@ -15,51 +15,43 @@ const router = Router();
 
 /**
  * @swagger
+ * /invoices/report:
+ *   get:
+ *     summary: Obtener reporte detallado de facturas y tendencias
+ *     tags: [Invoices]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: supplierIds
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *     responses:
+ *       200:
+ *         description: Reporte de facturas
+ */
+router.get("/invoices/report", apiKeyMiddleware, validate(invoiceQuerySchema), invoiceController.getInvoiceReport);
+
+/**
+ * @swagger
  * /invoices:
  *   post:
  *     summary: Crear una nueva factura
  *     tags: [Invoices]
  *     security:
  *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - date
- *               - supplier
- *               - category
- *               - items
- *             properties:
- *               date:
- *                 type: string
- *                 format: date
- *               supplier:
- *                 type: string
- *               reference:
- *                 type: string
- *               notes:
- *                 type: string
- *               items:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     description:
- *                       type: string
- *                     quantity:
- *                       type: integer
- *                     unitPrice:
- *                       type: number
- *     responses:
- *       201:
- *         description: Factura creada
- *       400:
- *         description: Error de validación
- *       401:
- *         description: No autorizado
  */
 router.post("/invoices", apiKeyMiddleware, validate(createInvoiceSchema), invoiceController.createInvoice);
 
@@ -71,47 +63,8 @@ router.post("/invoices", apiKeyMiddleware, validate(createInvoiceSchema), invoic
  *     tags: [Invoices]
  *     security:
  *       - ApiKeyAuth: []
- *     parameters:
- *       - in: query
- *         name: from
- *         schema:
- *           type: string
- *           format: date
- *         description: Fecha inicio del rango
- *       - in: query
- *         name: to
- *         schema:
- *           type: string
- *           format: date
- *         description: Fecha fin del rango
- *       - in: query
- *         name: supplier
- *         schema:
- *           type: string
- *         description: Filtrar por proveedor
- *     responses:
- *       200:
- *         description: Lista de facturas con total
- *       401:
- *         description: No autorizado
  */
 router.get("/invoices", apiKeyMiddleware, validate(invoiceQuerySchema), invoiceController.getInvoices);
-
-/**
- * @swagger
- * /invoices/suppliers:
- *   get:
- *     summary: Obtener lista de proveedores únicos
- *     tags: [Invoices]
- *     security:
- *       - ApiKeyAuth: []
- *     responses:
- *       200:
- *         description: Lista de proveedores
- *       401:
- *         description: No autorizado
- */
-router.get("/invoices/suppliers", apiKeyMiddleware, invoiceController.getSuppliers);
 
 /**
  * @swagger
@@ -121,20 +74,6 @@ router.get("/invoices/suppliers", apiKeyMiddleware, invoiceController.getSupplie
  *     tags: [Invoices]
  *     security:
  *       - ApiKeyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       200:
- *         description: Detalle de la factura
- *       404:
- *         description: Factura no encontrada
- *       401:
- *         description: No autorizado
  */
 router.get("/invoices/:id", apiKeyMiddleware, validate(invoiceIdSchema), invoiceController.getInvoiceById);
 
@@ -146,20 +85,6 @@ router.get("/invoices/:id", apiKeyMiddleware, validate(invoiceIdSchema), invoice
  *     tags: [Invoices]
  *     security:
  *       - ApiKeyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       204:
- *         description: Factura eliminada
- *       404:
- *         description: Factura no encontrada
- *       401:
- *         description: No autorizado
  */
 router.delete("/invoices/:id", apiKeyMiddleware, validate(invoiceIdSchema), invoiceController.deleteInvoice);
 

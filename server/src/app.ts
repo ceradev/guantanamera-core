@@ -10,6 +10,7 @@ import salesRoutes from "./routes/sales.routes.js"
 import notificationRoutes from "./routes/notification.routes.js"
 import settingRoutes from "./routes/setting.routes.js"
 import invoiceRoutes from "./routes/invoice.routes.js"
+import supplierRoutes from "./routes/supplier.routes.js"
 import authRoutes from "./routes/auth.routes.js"
 import swaggerUi from "swagger-ui-express"
 import { swaggerSpec } from "./config/swagger.js"
@@ -42,6 +43,7 @@ app.use(salesRoutes)
 app.use(notificationRoutes)
 app.use(settingRoutes)
 app.use(invoiceRoutes)
+app.use(supplierRoutes)
 app.use(authRoutes)
 
 // Sentry Error Handler must be before any other error middleware

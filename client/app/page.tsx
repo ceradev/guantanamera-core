@@ -5,13 +5,15 @@ import CreateOrderPage from "@/components/pages/create-order/create-order-page"
 import OrdersPage from "@/components/pages/orders/orders-page"
 import SalesPage from "@/components/pages/sales/sales-page"
 import ExpensesPage from "@/components/pages/expenses/expenses-page"
+import SuppliersPage from "@/app/suppliers/page"
 import MenuManagementPage from "@/components/pages/menu-management/menu-management-page"
 import SettingsPage from "@/components/pages/settings/settings-page"
+import ReportsPage from "@/app/reports/page"
 import Sidebar from "@/components/layout/sidebar"
 import { getOrders } from "@/lib/api"
 import { useNotifications } from "@/hooks/use-notifications"
 
-export type Page = "create-order" | "orders" | "sales" | "expenses" | "menu-management" | "settings"
+export type Page = "create-order" | "orders" | "sales" | "expenses" | "suppliers" | "reports" | "menu-management" | "settings"
 
 export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState<Page>("orders")
@@ -42,6 +44,10 @@ export default function Dashboard() {
         return <SalesPage />
       case "expenses":
         return <ExpensesPage />
+      case "suppliers":
+        return <SuppliersPage />
+      case "reports":
+        return <ReportsPage />
       case "menu-management":
         return <MenuManagementPage />
       case "settings":

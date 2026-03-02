@@ -15,12 +15,12 @@ export const createInvoice = async (req: Request, res: Response) => {
 
 export const getInvoices = async (req: Request, res: Response) => {
   try {
-    const { from, to, supplier } = (req as any).validated?.query ?? req.query;
+    const { from, to, supplierIds } = (req as any).validated?.query ?? req.query;
     
     const filters = {
       from: from as string,
       to: to as string,
-      supplier: supplier as string,
+      supplierIds: typeof supplierIds === 'string' ? [supplierIds] : supplierIds as string[],
     };
 
     const result = await invoiceService.getInvoices(filters);
@@ -31,12 +31,20 @@ export const getInvoices = async (req: Request, res: Response) => {
   }
 };
 
-export const getSuppliers = async (req: Request, res: Response) => {
+export const getInvoiceReport = async (req: Request, res: Response) => {
   try {
-    const suppliers = await invoiceService.getSuppliers();
-    res.json(suppliers);
+    const { from, to, supplierIds } = (req as any).validated?.query ?? req.query;
+    
+    const filters = {
+      from: from as string,
+      to: to as string,
+      supplierIds: typeof supplierIds === 'string' ? [supplierIds] : supplierIds as string[],
+    };
+
+    const report = await invoiceService.getInvoiceReport(filters);
+    res.json(report);
   } catch (error: any) {
-    logger.error(`Error fetching suppliers: ${error.message}`);
+    logger.error(`Error fetching invoice report: ${error.message}`);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -61,7 +69,6 @@ export const deleteInvoice = async (req: Request, res: Response) => {
   try {
     const { id } = (req as any).validated?.params ?? req.params;
     
-    // Check if invoice exists
     const existing = await invoiceService.getInvoiceById(id);
     if (!existing) {
       return res.status(404).json({ error: "Invoice not found" });

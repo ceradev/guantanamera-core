@@ -10,16 +10,18 @@ import {
 } from "@/components/ui/overlays/dialog"
 import { Button } from "@/components/ui/buttons/button"
 import { Input } from "@/components/ui/inputs/input"
-import { Plus, Trash2, Euro, Loader2 } from "lucide-react"
+import { Card } from "@/components/ui/data-display/card"
+import { Plus, Trash2, Euro, Loader2, Building2 } from "lucide-react"
 import { createInvoice, getSuppliers } from "@/services"
 import { format } from "date-fns"
-import type { CreateInvoiceInput } from "@/types"
+import type { CreateInvoiceInput, Supplier } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 
 interface InvoiceItemInput {
     description: string
     quantity: number
     unitPrice: number
+    taxRate: number
 }
 
 interface AddInvoiceModalProps {
@@ -32,12 +34,12 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
     const { toast } = useToast()
     const [loading, setLoading] = useState(false)
     const [date, setDate] = useState("")
-    const [supplier, setSupplier] = useState("")
-    const [suppliers, setSuppliers] = useState<string[]>([])
+    const [supplierId, setSupplierId] = useState("")
+    const [suppliers, setSuppliers] = useState<Supplier[]>([])
     const [reference, setReference] = useState("")
     const [notes, setNotes] = useState("")
     const [items, setItems] = useState<InvoiceItemInput[]>([
-        { description: "", quantity: 1, unitPrice: 0 },
+        { description: "", quantity: 1, unitPrice: 0, taxRate: 7 },
     ])
 
     // Initialize date and fetch suppliers on client
@@ -61,12 +63,17 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
     }, [date, open])
 
     // Calculate totals
-    const calculateItemTotal = (item: InvoiceItemInput) => item.quantity * item.unitPrice
+    const calculateItemTotal = (item: InvoiceItemInput) => {
+        const base = item.quantity * item.unitPrice
+        const tax = base * (item.taxRate / 100)
+        return base + tax
+    }
+    
     const totalAmount = items.reduce((sum, item) => sum + calculateItemTotal(item), 0)
 
     // Add new item
     const addItem = useCallback(() => {
-        setItems((prev) => [...prev, { description: "", quantity: 1, unitPrice: 0 }])
+        setItems((prev) => [...prev, { description: "", quantity: 1, unitPrice: 0, taxRate: 7 }])
     }, [])
 
     // Remove item
@@ -86,21 +93,21 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
     // Reset form
     const resetForm = useCallback(() => {
         setDate(format(new Date(), "yyyy-MM-dd"))
-        setSupplier("")
+        setSupplierId("")
         setReference("")
         setNotes("")
-        setItems([{ description: "", quantity: 1, unitPrice: 0 }])
+        setItems([{ description: "", quantity: 1, unitPrice: 0, taxRate: 7 }])
     }, [])
 
     // Handle submit
     const handleSubmit = useCallback(async () => {
         // Validate
-        if (!supplier.trim()) {
+        if (!supplierId) {
             toast({ title: "Error", description: "El proveedor es requerido", variant: "destructive" })
             return
         }
 
-        const validItems = items.filter((item) => item.description.trim() && item.quantity > 0 && item.unitPrice > 0)
+        const validItems = items.filter((item) => item.description.trim() && item.quantity > 0 && item.unitPrice !== 0)
         if (validItems.length === 0) {
             toast({ title: "Error", description: "Se requiere al menos un item válido", variant: "destructive" })
             return
@@ -108,7 +115,7 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
 
         const data: CreateInvoiceInput = {
             date,
-            supplier: supplier.trim(),
+            supplierId,
             reference: reference.trim() || undefined,
             notes: notes.trim() || undefined,
             items: validItems,
@@ -126,164 +133,178 @@ export function AddInvoiceModal({ open, onOpenChange, onSuccess }: AddInvoiceMod
         } finally {
             setLoading(false)
         }
-    }, [date, supplier, reference, notes, items, resetForm, onSuccess, toast])
+    }, [date, supplierId, reference, notes, items, resetForm, onSuccess, toast])
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="overflow-y-auto max-h-[90vh] w-full max-w-4xl bg-white p-6 md:p-8 rounded-2xl">
+            <DialogContent className="overflow-y-auto max-h-[90vh] w-full max-w-5xl bg-white p-6 md:p-8 rounded-2xl">
                 <DialogHeader className="mb-4">
-                    <DialogTitle className="text-2xl font-bold text-gray-900">Añadir Factura</DialogTitle>
+                    <DialogTitle className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                        <div className="p-2 bg-red-50 rounded-lg">
+                            <Plus className="w-6 h-6 text-red-600" />
+                        </div>
+                        Añadir Nueva Factura
+                    </DialogTitle>
                 </DialogHeader>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                     {/* Left Column: Form Details */}
-                    <div className="space-y-6">
+                    <div className="xl:col-span-1 space-y-6">
                         <div className="grid gap-2">
-                            <label htmlFor="date" className="text-sm font-bold text-gray-700">Fecha *</label>
+                            <label htmlFor="date" className="text-sm font-bold text-gray-700">Fecha de Factura *</label>
                             <Input
                                 id="date"
                                 type="date"
                                 value={date}
                                 onChange={(e) => setDate(e.target.value)}
-                                className="rounded-xl border-gray-200 focus:ring-red-500/20 focus:border-red-500 h-11"
+                                className="rounded-xl border-2 border-gray-100 focus:ring-red-500/20 focus:border-red-500 h-12 font-medium"
                             />
                         </div>
 
                         <div className="grid gap-2">
                             <label htmlFor="supplier" className="text-sm font-bold text-gray-700">Proveedor *</label>
-                            <Input
-                                id="supplier"
-                                type="text"
-                                list="suppliers-list"
-                                value={supplier}
-                                onChange={(e) => setSupplier(e.target.value)}
-                                placeholder="Nombre del proveedor"
-                                className="rounded-xl border-gray-200 focus:ring-red-500/20 focus:border-red-500 h-11"
-                            />
-                            <datalist id="suppliers-list">
-                                {suppliers.map((s) => (
-                                    <option key={s} value={s} />
-                                ))}
-                            </datalist>
+                            <div className="relative">
+                                <Building2 className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                                <select
+                                    id="supplier"
+                                    value={supplierId}
+                                    onChange={(e) => setSupplierId(e.target.value)}
+                                    className="w-full pl-10 pr-4 rounded-xl border-2 border-gray-100 focus:ring-red-500/20 focus:border-red-500 h-12 font-medium bg-white appearance-none cursor-pointer"
+                                >
+                                    <option value="">Selecciona un proveedor</option>
+                                    {suppliers.map((s) => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.name} {s.fiscalId ? `(${s.fiscalId})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         <div className="grid gap-2">
-                            <label htmlFor="reference" className="text-sm font-bold text-gray-700">Referencia</label>
+                            <label htmlFor="reference" className="text-sm font-bold text-gray-700">Referencia / Nº Factura</label>
                             <Input
                                 id="reference"
                                 type="text"
                                 value={reference}
                                 onChange={(e) => setReference(e.target.value)}
-                                placeholder="Nº factura (opcional)"
-                                className="rounded-xl border-gray-200 focus:ring-red-500/20 focus:border-red-500 h-11"
+                                placeholder="Ej: INV-2024-001"
+                                className="rounded-xl border-2 border-gray-100 focus:ring-red-500/20 focus:border-red-500 h-12 font-medium"
                             />
                         </div>
 
                         <div className="grid gap-2">
-                            <label htmlFor="notes" className="text-sm font-bold text-gray-700">Notas</label>
+                            <label htmlFor="notes" className="text-sm font-bold text-gray-700">Notas Adicionales</label>
                             <textarea
                                 id="notes"
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
-                                placeholder="Notas adicionales (opcional)"
-                                className="w-full rounded-xl border-gray-200 focus:ring-red-500/20 focus:border-red-500 min-h-[80px] p-3 text-sm"
+                                placeholder="Detalles internos..."
+                                className="w-full rounded-xl border-2 border-gray-100 focus:ring-red-500/20 focus:border-red-500 min-h-[100px] p-3 text-sm font-medium"
                             />
                         </div>
 
-                        <div className="flex justify-between items-center bg-red-50 p-5 rounded-2xl border border-red-100 mt-4">
-                            <span className="font-bold text-red-900 text-lg">Total</span>
-                            <div className="flex items-center gap-2">
-                                <Euro className="w-5 h-5 text-red-600" />
-                                <span className="font-black text-3xl text-red-600">
-                                    {totalAmount.toFixed(2)}
-                                </span>
+                        <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl mt-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Facturado</span>
+                                <Euro className="w-4 h-4 text-red-500" />
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-3xl font-black text-white">€{totalAmount.toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Right Column: Items List */}
-                    <div className="space-y-4 md:border-l md:pl-8 border-gray-100">
+                    <div className="xl:col-span-2 space-y-4">
                         <div className="flex items-center justify-between mb-2">
-                            <label className="text-lg font-bold text-gray-900">Conceptos *</label>
-                            <Button size="sm" variant="ghost" onClick={addItem} className="text-red-600 hover:text-red-700 hover:bg-red-50 font-bold text-sm h-9 px-4 rounded-lg">
-                                + Añadir Concepto
+                            <h3 className="text-lg font-black text-gray-900">Desglose de Conceptos</h3>
+                            <Button size="sm" variant="outline" onClick={addItem} className="text-red-600 border-red-100 hover:bg-red-50 font-black text-xs h-9 px-4 rounded-lg">
+                                + AÑADIR CONCEPTO
                             </Button>
                         </div>
 
-                        <div className="space-y-3 max-h-[300px] md:max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                             {items.map((item, index) => (
-                                <div key={index} className="flex items-end gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                        <div className="sm:col-span-1 space-y-1">
-                                            <p className="text-xs font-bold text-gray-500 ml-1">Descripción</p>
+                                <Card key={index} className="p-4 border-2 border-gray-100 shadow-sm rounded-xl bg-gray-50/50">
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                        <div className="md:col-span-5 space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase">Descripción</p>
                                             <Input
-                                                type="text"
-                                                placeholder="Descripción"
+                                                placeholder="Concepto..."
                                                 value={item.description}
                                                 onChange={(e) => updateItem(index, "description", e.target.value)}
-                                                className="h-10 rounded-lg"
+                                                className="h-10 border-gray-200 font-medium"
                                             />
                                         </div>
-                                        <div className="space-y-1">
-                                            <p className="text-xs font-bold text-gray-500 ml-1">Cantidad</p>
+                                        <div className="md:col-span-2 space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase">Cant.</p>
                                             <Input
                                                 type="number"
-                                                placeholder="Cant."
                                                 min={1}
                                                 value={item.quantity || ""}
                                                 onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 0)}
-                                                className="h-10 rounded-lg text-center font-bold"
+                                                className="h-10 border-gray-200 font-bold text-center"
                                             />
                                         </div>
-                                        <div className="space-y-1">
-                                            <p className="text-xs font-bold text-gray-500 ml-1">Precio €</p>
+                                        <div className="md:col-span-2 space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase">P. Base €</p>
                                             <Input
                                                 type="number"
-                                                placeholder="€"
-                                                min={0}
                                                 step={0.01}
                                                 value={item.unitPrice || ""}
                                                 onChange={(e) => updateItem(index, "unitPrice", parseFloat(e.target.value) || 0)}
-                                                className="h-10 rounded-lg text-center font-bold"
+                                                className="h-10 border-gray-200 font-bold text-center"
                                             />
                                         </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-bold text-gray-700 min-w-[60px] text-right">
-                                            €{calculateItemTotal(item).toFixed(2)}
-                                        </span>
-                                        {items.length > 1 && (
-                                            <Button variant="ghost" size="icon" onClick={() => removeItem(index)} className="h-10 w-10 text-gray-400 hover:text-red-500 hover:bg-white rounded-lg shrink-0">
+                                        <div className="md:col-span-2 space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase">IGIC %</p>
+                                            <select
+                                                value={item.taxRate}
+                                                onChange={(e) => updateItem(index, "taxRate", parseFloat(e.target.value))}
+                                                className="w-full h-10 border-gray-200 rounded-md text-sm font-bold text-center bg-white border"
+                                            >
+                                                <option value={0}>0%</option>
+                                                <option value={3}>3%</option>
+                                                <option value={7}>7%</option>
+                                                <option value={9.5}>9.5%</option>
+                                                <option value={15}>15%</option>
+                                                <option value={20}>20%</option>
+                                            </select>
+                                        </div>
+                                        <div className="md:col-span-1 flex justify-center">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={() => removeItem(index)}
+                                                disabled={items.length === 1}
+                                                className="h-10 w-10 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                                            >
                                                 <Trash2 className="w-5 h-5" />
                                             </Button>
-                                        )}
+                                        </div>
                                     </div>
-                                </div>
+                                    <div className="mt-3 flex justify-end items-center gap-4 text-xs font-bold border-t border-gray-100 pt-3">
+                                        <span className="text-gray-400">Subtotal: €{(item.quantity * item.unitPrice).toFixed(2)}</span>
+                                        <span className="text-gray-400">IGIC: €{(item.quantity * item.unitPrice * (item.taxRate / 100)).toFixed(2)}</span>
+                                        <span className="text-red-600 bg-red-50 px-2 py-1 rounded">Total: €{calculateItemTotal(item).toFixed(2)}</span>
+                                    </div>
+                                </Card>
                             ))}
-
-                            {items.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                                    <div className="p-3 bg-gray-100 rounded-full mb-3">
-                                        <Plus className="w-6 h-6 text-gray-400" />
-                                    </div>
-                                    <p className="text-sm font-medium text-gray-500">No has añadido conceptos</p>
-                                    <Button variant="link" onClick={addItem} className="text-red-600 font-bold mt-1">
-                                        Añadir el primero
-                                    </Button>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
 
-                <DialogFooter className="mt-8 sm:mt-0">
-                    <div className="flex w-full justify-end gap-3">
-                        <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold h-11 px-6">Cancelar</Button>
-                        <Button onClick={handleSubmit} disabled={loading} className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl h-11 px-8 shadow-lg shadow-red-200">
-                            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            Guardar Factura
-                        </Button>
+                <DialogFooter className="mt-8 border-t pt-6">
+                    <div className="flex w-full justify-between items-center">
+                        <p className="text-xs font-bold text-gray-400">* Campos obligatorios</p>
+                        <div className="flex gap-3">
+                            <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold h-12 px-6">Cancelar</Button>
+                            <Button onClick={handleSubmit} disabled={loading} className="bg-red-600 hover:bg-red-700 text-white font-black rounded-xl h-12 px-10 shadow-lg shadow-red-200">
+                                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                REGISTRAR FACTURA
+                            </Button>
+                        </div>
                     </div>
                 </DialogFooter>
             </DialogContent>

@@ -2,13 +2,15 @@ import { fetchAPI } from '@/lib/api'
 import type { 
   Invoice, 
   InvoicesResponse, 
-  CreateInvoiceInput
+  CreateInvoiceInput,
+  Supplier,
+  InvoiceReport
 } from '@/types'
 
 export interface InvoiceFilters {
   from?: string
   to?: string
-  supplier?: string
+  supplierIds?: string[]
 }
 
 /**
@@ -18,7 +20,10 @@ export async function getInvoices(filters: InvoiceFilters = {}): Promise<Invoice
   const params = new URLSearchParams()
   if (filters.from) params.append('from', filters.from)
   if (filters.to) params.append('to', filters.to)
-  if (filters.supplier) params.append('supplier', filters.supplier)
+  
+  if (filters.supplierIds) {
+    filters.supplierIds.forEach(id => params.append('supplierIds', id))
+  }
   
   const queryString = params.toString()
   const endpoint = queryString ? `/invoices?${queryString}` : '/invoices'
@@ -27,10 +32,57 @@ export async function getInvoices(filters: InvoiceFilters = {}): Promise<Invoice
 }
 
 /**
- * Get all unique suppliers
+ * Create a new supplier
  */
-export async function getSuppliers(): Promise<string[]> {
-  return fetchAPI<string[]>('/invoices/suppliers', {}, true)
+export async function createSupplier(data: Partial<Supplier>): Promise<Supplier> {
+  return fetchAPI<Supplier>('/suppliers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, true)
+}
+
+/**
+ * Update a supplier
+ */
+export async function updateSupplier(id: string, data: Partial<Supplier>): Promise<Supplier> {
+  return fetchAPI<Supplier>(`/suppliers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }, true)
+}
+
+/**
+ * Delete a supplier
+ */
+export async function deleteSupplier(id: string): Promise<void> {
+  await fetchAPI<void>(`/suppliers/${id}`, {
+    method: 'DELETE',
+  }, true)
+}
+
+/**
+ * Get invoice reporting summary and trends
+ */
+export async function getInvoiceReport(filters: InvoiceFilters = {}): Promise<InvoiceReport> {
+  const params = new URLSearchParams()
+  if (filters.from) params.append('from', filters.from)
+  if (filters.to) params.append('to', filters.to)
+  
+  if (filters.supplierIds) {
+    filters.supplierIds.forEach(id => params.append('supplierIds', id))
+  }
+  
+  const queryString = params.toString()
+  const endpoint = queryString ? `/invoices/report?${queryString}` : '/invoices/report'
+  
+  return fetchAPI<InvoiceReport>(endpoint, {}, true)
+}
+
+/**
+ * Get all suppliers
+ */
+export async function getSuppliers(): Promise<Supplier[]> {
+  return fetchAPI<Supplier[]>('/suppliers', {}, true)
 }
 
 /**

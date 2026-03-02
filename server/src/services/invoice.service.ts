@@ -2,53 +2,68 @@ import { prisma } from "../prisma/client.js";
 
 export interface CreateInvoiceInput {
   date: Date;
-  supplier: string;
+  supplierId: string;
   reference?: string;
   notes?: string;
   items: {
     description: string;
     quantity: number;
     unitPrice: number;
+    taxRate?: number;
   }[];
 }
 
 export interface InvoiceFilters {
   from?: string;
   to?: string;
-  supplier?: string;
+  supplierIds?: string[];
 }
 
 /**
- * Create a new invoice with items
+ * Create a new invoice with items and tax calculations
  */
 export async function createInvoice(data: CreateInvoiceInput) {
-  // Calculate total for each item and overall total
-  const itemsWithTotal = data.items.map((item) => ({
-    ...item,
-    totalPrice: item.quantity * item.unitPrice,
-  }));
+  // Calculate tax and totals for each item
+  const itemsWithTaxes = data.items.map((item) => {
+    const taxRate = item.taxRate || 0;
+    const basePrice = item.quantity * item.unitPrice;
+    const taxAmount = basePrice * (taxRate / 100);
+    const totalPrice = basePrice + taxAmount;
 
-  const totalAmount = itemsWithTotal.reduce((sum, item) => sum + item.totalPrice, 0);
+    return {
+      ...item,
+      taxRate,
+      taxAmount,
+      totalPrice,
+    };
+  });
+
+  const baseAmount = itemsWithTaxes.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const taxAmount = itemsWithTaxes.reduce((sum, item) => sum + item.taxAmount, 0);
+  const totalAmount = baseAmount + taxAmount;
 
   return (prisma.invoice as any).create({
     data: {
       date: data.date,
-      supplier: data.supplier,
+      supplierId: data.supplierId,
       reference: data.reference,
       notes: data.notes,
+      baseAmount,
+      taxAmount,
       totalAmount,
       items: {
-        create: itemsWithTotal,
+        create: itemsWithTaxes,
       },
     },
     include: {
       items: true,
+      supplier: true,
     },
   });
 }
 
 /**
- * Get invoices with optional filters
+ * Get invoices with optional filters (supports multi-supplier)
  */
 export async function getInvoices(filters: InvoiceFilters) {
   const where: any = {};
@@ -59,17 +74,15 @@ export async function getInvoices(filters: InvoiceFilters) {
       where.date.gte = new Date(filters.from);
     }
     if (filters.to) {
-      // Set to end of day
       const toDate = new Date(filters.to);
       toDate.setHours(23, 59, 59, 999);
       where.date.lte = toDate;
     }
   }
 
-  if (filters.supplier) {
-    where.supplier = {
-      contains: filters.supplier,
-      mode: "insensitive",
+  if (filters.supplierIds && filters.supplierIds.length > 0) {
+    where.supplierId = {
+      in: filters.supplierIds,
     };
   }
 
@@ -77,54 +90,86 @@ export async function getInvoices(filters: InvoiceFilters) {
     where,
     include: {
       items: true,
+      supplier: true,
     },
     orderBy: {
       date: "desc",
     },
   });
 
-  // Calculate total for the period
-  const totalExpenses = invoices.reduce((sum: number, inv: any) => sum + inv.totalAmount, 0);
+  const totalAmount = invoices.reduce((sum: number, inv: any) => sum + inv.totalAmount, 0);
+  const totalBase = invoices.reduce((sum: number, inv: any) => sum + inv.baseAmount, 0);
+  const totalTax = invoices.reduce((sum: number, inv: any) => sum + inv.taxAmount, 0);
 
   return {
     invoices,
-    totalExpenses,
-    count: invoices.length,
+    totals: {
+      totalAmount,
+      totalBase,
+      totalTax,
+      count: invoices.length,
+    },
   };
 }
 
 /**
- * Get all unique suppliers
+ * Get reporting summaries and trends
  */
-export async function getSuppliers() {
-  const result = await (prisma.invoice as any).findMany({
-    distinct: ["supplier"],
-    select: {
-      supplier: true,
-    },
-    orderBy: {
-      supplier: "asc",
-    },
-  });
+export async function getInvoiceReport(filters: InvoiceFilters) {
+  const { invoices, totals } = await getInvoices(filters);
 
-  return result.map((r: any) => r.supplier);
+  // Group by supplier for subtotals
+  const supplierSubtotals = invoices.reduce((acc: any, inv: any) => {
+    const sId = inv.supplierId;
+    if (!acc[sId]) {
+      acc[sId] = {
+        supplierName: inv.supplier.name,
+        count: 0,
+        totalBase: 0,
+        totalTax: 0,
+        totalAmount: 0,
+      };
+    }
+    acc[sId].count += 1;
+    acc[sId].totalBase += inv.baseAmount;
+    acc[sId].totalTax += inv.taxAmount;
+    acc[sId].totalAmount += inv.totalAmount;
+    return acc;
+  }, {});
+
+  // Group by month for trends
+  const monthlyTrends = invoices.reduce((acc: any, inv: any) => {
+    const month = new Date(inv.date).toISOString().substring(0, 7); // YYYY-MM
+    if (!acc[month]) {
+      acc[month] = {
+        month,
+        totalAmount: 0,
+        count: 0,
+      };
+    }
+    acc[month].totalAmount += inv.totalAmount;
+    acc[month].count += 1;
+    return acc;
+  }, {});
+
+  return {
+    summary: totals,
+    supplierSubtotals: Object.values(supplierSubtotals),
+    trends: Object.values(monthlyTrends).sort((a: any, b: any) => a.month.localeCompare(b.month)),
+    invoices, // Include the full list for detailed reporting
+  };
 }
 
-/**
- * Get invoice by ID
- */
 export async function getInvoiceById(id: string) {
   return (prisma.invoice as any).findUnique({
     where: { id },
     include: {
       items: true,
+      supplier: true,
     },
   });
 }
 
-/**
- * Delete invoice by ID
- */
 export async function deleteInvoice(id: string) {
   return (prisma.invoice as any).delete({
     where: { id },
